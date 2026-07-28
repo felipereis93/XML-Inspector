@@ -1,0 +1,25 @@
+<?xml version="1.0" standalone="yes"?>
+<DATAPACKET Version="2.0">
+  <METADATA>
+    <FIELDS>
+      <FIELD WIDTH="11" attrname="ECTCE_Codigo" fieldtype="string"/>
+      <FIELD attrname="LCDTCE_NumLancamento" fieldtype="i4"/>
+      <FIELD attrname="LCDTCE_DataLancamento" fieldtype="dateTime"/>
+      <FIELD WIDTH="60" attrname="LCDTCE_Historico" fieldtype="string"/>
+      <FIELD WIDTH="17" attrname="LCDTCE_ValorDebito" fieldtype="string"/>
+      <FIELD WIDTH="17" attrname="LCDTCE_ValorCredito" fieldtype="string"/>
+      <FIELD WIDTH="20" attrname="LCDTCE_Observacao" fieldtype="string"/>
+    </FIELDS>
+    <PARAMS DEFAULT_ORDER="1" PRIMARY_KEY="1"/>
+  </METADATA>
+  <ROWDATA>
+    <ROW ECTCE_Codigo="21141060051" LCDTCE_NumLancamento="1001" LCDTCE_DataLancamento="2024-03-01" LCDTCE_Historico="Recebimento cliente Aurora" LCDTCE_ValorDebito="15400.00" LCDTCE_ValorCredito="0.00"/>
+    <ROW ECTCE_Codigo="31210100102" LCDTCE_NumLancamento="1002" LCDTCE_DataLancamento="2024-03-01" LCDTCE_Historico="Pagamento energia eletrica" LCDTCE_ValorDebito="0.00" LCDTCE_ValorCredito="2380.50"/>
+    <ROW ECTCE_Codigo="11302001001" LCDTCE_NumLancamento="1003" LCDTCE_DataLancamento="2024-03-04" LCDTCE_Historico="Compra de mercadorias" LCDTCE_ValorDebito="8720.35" LCDTCE_ValorCredito="0.00"/>
+    <ROW ECTCE_Codigo="31101002002" LCDTCE_NumLancamento="1004" LCDTCE_DataLancamento="2024-03-07" LCDTCE_Historico="Folha de pagamento marco" LCDTCE_ValorDebito="0.00" LCDTCE_ValorCredito="43900.00"/>
+    <ROW ECTCE_Codigo="21141060051" LCDTCE_NumLancamento="1005" LCDTCE_DataLancamento="2024-03-12" LCDTCE_Historico="Faturamento consolidado" LCDTCE_ValorDebito="127500.90" LCDTCE_ValorCredito="0.00"/>
+    <ROW ECTCE_Codigo="31210102201" LCDTCE_NumLancamento="1006" LCDTCE_DataLancamento="2024-03-15" LCDTCE_Historico="Servicos de contabilidade" LCDTCE_ValorDebito="0.00" LCDTCE_ValorCredito="960.00"/>
+    <ROW ECTCE_Codigo="11302001001" LCDTCE_NumLancamento="1007" LCDTCE_DataLancamento="2024-03-21" LCDTCE_Historico="Compra de mercadorias" LCDTCE_ValorDebito="54300.00" LCDTCE_ValorCredito="0.00"/>
+    <ROW ECTCE_Codigo="31210100102" LCDTCE_NumLancamento="1008" LCDTCE_DataLancamento="2024-03-28" LCDTCE_Historico="Pagamento energia eletrica" LCDTCE_ValorDebito="0.00" LCDTCE_ValorCredito="2415.80"/>
+  </ROWDATA>
+</DATAPACKET>

@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nfeProc versao="4.00">
+  <NFe>
+    <infNFe Id="NFe35240612345678000199550010000012341000012349" versao="4.00">
+      <ide>
+        <cUF>35</cUF>
+        <natOp>VENDA DE MERCADORIA</natOp>
+        <mod>55</mod>
+        <serie>1</serie>
+        <nNF>1234</nNF>
+        <dhEmi>2024-06-14T11:05:00-03:00</dhEmi>
+        <tpNF>1</tpNF>
+      </ide>
+      <emit>
+        <CNPJ>12345678000199</CNPJ>
+        <xNome>Distribuidora Aurora S.A.</xNome>
+        <enderEmit>
+          <xLgr>Rua das Laranjeiras</xLgr>
+          <nro>440</nro>
+          <xMun>Sao Paulo</xMun>
+          <UF>SP</UF>
+          <CEP>01402000</CEP>
+          <fone>1133224455</fone>
+        </enderEmit>
+      </emit>
+      <dest>
+        <CNPJ>98765432000155</CNPJ>
+        <xNome>Mercado Serra Azul ME</xNome>
+        <enderDest>
+          <xLgr>Avenida Central</xLgr>
+          <nro>1290</nro>
+          <xMun>Campinas</xMun>
+          <UF>SP</UF>
+        </enderDest>
+      </dest>
+      <det nItem="1">
+        <prod>
+          <cProd>SKU-4410</cProd>
+          <xProd>Cafe torrado 500g</xProd>
+          <NCM>09012100</NCM>
+          <CFOP>5102</CFOP>
+          <uCom>CX</uCom>
+          <qCom>24.0000</qCom>
+          <vUnCom>19.9000</vUnCom>
+          <vProd>477.60</vProd>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS00>
+              <CST>00</CST>
+              <vBC>477.60</vBC>
+              <pICMS>18.00</pICMS>
+              <vICMS>85.97</vICMS>
+            </ICMS00>
+          </ICMS>
+        </imposto>
+      </det>
+      <det nItem="2">
+        <prod>
+          <cProd>SKU-7781</cProd>
+          <xProd>Acucar refinado 1kg</xProd>
+          <NCM>17019900</NCM>
+          <CFOP>5102</CFOP>
+          <uCom>FD</uCom>
+          <qCom>50.0000</qCom>
+          <vUnCom>4.2500</vUnCom>
+          <vProd>212.50</vProd>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS00>
+              <CST>00</CST>
+              <vBC>212.50</vBC>
+              <pICMS>18.00</pICMS>
+              <vICMS>38.25</vICMS>
+            </ICMS00>
+          </ICMS>
+        </imposto>
+      </det>
+      <det nItem="4">
+        <prod>
+          <cProd>SKU-9002</cProd>
+          <xProd>Oleo de soja 900ml</xProd>
+          <NCM>15071000</NCM>
+          <CFOP>5102</CFOP>
+          <uCom>CX</uCom>
+          <qCom>30.0000</qCom>
+          <vUnCom>7.8000</vUnCom>
+          <vProd>234.00</vProd>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS00>
+              <CST>00</CST>
+              <vBC>234.00</vBC>
+              <pICMS>18.00</pICMS>
+              <vICMS>42.12</vICMS>
+            </ICMS00>
+          </ICMS>
+        </imposto>
+      </det>
+      <det nItem="5">
+        <prod>
+          <cProd>SKU-3320</cProd>
+          <xProd>Leite condensado 395g</xProd>
+          <NCM>04029900</NCM>
+          <CFOP>5102</CFOP>
+          <uCom>CX</uCom>
+          <qCom>18.0000</qCom>
+          <vUnCom>6.4000</vUnCom>
+          <vProd>115.20</vProd>
+        </prod>
+        <imposto>
+          <ICMS>
+            <ICMS00>
+              <CST>00</CST>
+              <vBC>115.20</vBC>
+              <pICMS>18.00</pICMS>
+              <vICMS>20.74</vICMS>
+            </ICMS00>
+          </ICMS>
+        </imposto>
+      </det>
+      <total>
+        <ICMSTot>
+          <vBC>1039.30</vBC>
+          <vICMS>187.08</vICMS>
+          <vProd>1039.30</vProd>
+          <vFrete>45.00</vFrete>
+          <vDesc>0.00</vDesc>
+          <vNF>1084.30</vNF>
+        </ICMSTot>
+      </total>
+      <transp>
+        <modFrete>0</modFrete>
+        <transporta>
+          <CNPJ>11222333000144</CNPJ>
+          <xNome>Transportes Vale Verde</xNome>
+          <UF>SP</UF>
+        </transporta>
+      </transp>
+    </infNFe>
+  </NFe>
+  <protNFe versao="4.00">
+    <infProt>
+      <cStat>100</cStat>
+      <xMotivo>Autorizado o uso da NF-e</xMotivo>
+      <dhRecbto>2024-06-14T11:07:44-03:00</dhRecbto>
+    </infProt>
+  </protNFe>
+</nfeProc>

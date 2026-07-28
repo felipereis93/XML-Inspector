@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DOCUMENT>
+  <LCDTCE>
+    <ROW LCDTCE_NumLancamento="1001" LCDTCE_DataLancamento="2024-03-01" LCDTCE_ContaDebito="1.1.1.01.001" LCDTCE_ContaCredito="2.1.1.01.004" LCDTCE_ValorDebito="15400.00" LCDTCE_ValorCredito="0.00" LCDTCE_Historico="Recebimento cliente Aurora"/>
+    <ROW LCDTCE_NumLancamento="1002" LCDTCE_DataLancamento="2024-03-01" LCDTCE_ContaDebito="3.1.2.01.010" LCDTCE_ContaCredito="1.1.1.01.001" LCDTCE_ValorDebito="0.00" LCDTCE_ValorCredito="2380.50" LCDTCE_Historico="Pagamento energia eletrica"/>
+    <ROW LCDTCE_NumLancamento="1003" LCDTCE_DataLancamento="2024-03-04" LCDTCE_ContaDebito="1.1.3.02.001" LCDTCE_ContaCredito="2.1.1.01.004" LCDTCE_ValorDebito="8720.35" LCDTCE_ValorCredito="0.00" LCDTCE_Historico="Compra de mercadorias"/>
+    <ROW LCDTCE_NumLancamento="1004" LCDTCE_DataLancamento="2024-03-07" LCDTCE_ContaDebito="3.1.1.01.002" LCDTCE_ContaCredito="1.1.1.01.001" LCDTCE_ValorDebito="0.00" LCDTCE_ValorCredito="43900.00" LCDTCE_Historico="Folha de pagamento marco"/>
+    <ROW LCDTCE_NumLancamento="1005" LCDTCE_DataLancamento="2024-03-12" LCDTCE_ContaDebito="1.1.1.01.001" LCDTCE_ContaCredito="3.2.1.01.001" LCDTCE_ValorDebito="127500.90" LCDTCE_ValorCredito="0.00" LCDTCE_Historico="Faturamento consolidado"/>
+    <ROW LCDTCE_NumLancamento="1006" LCDTCE_DataLancamento="2024-03-15" LCDTCE_ContaDebito="3.1.2.01.022" LCDTCE_ContaCredito="1.1.1.01.001" LCDTCE_ValorDebito="0.00" LCDTCE_ValorCredito="960.00" LCDTCE_Historico="Servicos de contabilidade"/>
+    <ROW LCDTCE_NumLancamento="1007" LCDTCE_DataLancamento="2024-03-21" LCDTCE_ContaDebito="1.1.3.02.001" LCDTCE_ContaCredito="2.1.1.01.009" LCDTCE_ValorDebito="54300.00" LCDTCE_ValorCredito="0.00" LCDTCE_Historico="Compra de mercadorias"/>
+    <ROW LCDTCE_NumLancamento="1008" LCDTCE_DataLancamento="2024-03-28" LCDTCE_ContaDebito="3.1.2.01.010" LCDTCE_ContaCredito="1.1.1.01.001" LCDTCE_ValorDebito="0.00" LCDTCE_ValorCredito="2415.80" LCDTCE_Historico="Pagamento energia eletrica"/>
+  </LCDTCE>
+  <PARAMETROS>
+    <ROW Empresa="Distribuidora Aurora Ltda" CNPJ="12345678000199" Competencia="2024-03" Moeda="BRL"/>
+  </PARAMETROS>
+</DOCUMENT>

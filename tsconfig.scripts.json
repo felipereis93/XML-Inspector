@@ -1,0 +1,32 @@
+{
+  // Projeto separado para `scripts/`. Eles rodam sob `tsx`, que resolve
+  // imports sem extensão como um bundler — daí `moduleResolution: bundler` em
+  // vez do `nodenext` do vite.config.
+  //
+  // Entram no `tsc -b` de propósito: os smoke tests montam objetos `Filter` e
+  // `XmlDocument` à mão, e sem checagem uma mudança de tipo no núcleo só
+  // apareceria como erro em runtime, no meio da execução do teste.
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.scripts.tsbuildinfo",
+    "target": "es2023",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "skipLibCheck": true,
+
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  // Só os scripts. O TypeScript segue os imports e checa o núcleo junto, mas
+  // não puxa módulos de navegador (`lib/download.ts`) que nenhum script usa.
+  "include": ["scripts/**/*.ts"]
+}

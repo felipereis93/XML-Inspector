@@ -1,0 +1,20 @@
+<?xml version="1.0" standalone="yes"?>
+<DATAPACKET Version="2.0">
+  <METADATA>
+    <FIELDS>
+      <FIELD WIDTH="11" attrname="ECTCE_Codigo" fieldtype="string"/>
+      <FIELD attrname="LCDTCE_NumLancamento" fieldtype="i4"/>
+      <FIELD WIDTH="60" attrname="LCDTCE_Historico" fieldtype="string"/>
+      <FIELD WIDTH="17" attrname="LCDTCE_ValorDebito" fieldtype="string"/>
+    </FIELDS>
+    <PARAMS/>
+  </METADATA>
+  <ROWDATA>
+    <ROW ECTCE_Codigo="53110000000" LCDTCE_NumLancamento="1" LCDTCE_Historico="Repasse FUNDEB" LCDTCE_ValorDebito="12000.00"/>
+    <ROW ECTCE_Codigo="53120000000" LCDTCE_NumLancamento="2" LCDTCE_Historico="Repasse ICMS" LCDTCE_ValorDebito="8500.00"/>
+    <ROW ECTCE_Codigo="53130000000" LCDTCE_NumLancamento="3" LCDTCE_Historico="Repasse IPVA" LCDTCE_ValorDebito="3200.00"/>
+    <ROW ECTCE_Codigo="53110000000" LCDTCE_NumLancamento="4" LCDTCE_Historico="Repasse FUNDEB complementar" LCDTCE_ValorDebito="45000.00"/>
+    <ROW ECTCE_Codigo="61110000000" LCDTCE_NumLancamento="5" LCDTCE_Historico="Folha de pagamento" LCDTCE_ValorDebito="98000.00"/>
+    <ROW ECTCE_Codigo="53120000000" LCDTCE_NumLancamento="6" LCDTCE_Historico="Repasse ICMS complementar" LCDTCE_ValorDebito="1500.00"/>
+  </ROWDATA>
+</DATAPACKET>

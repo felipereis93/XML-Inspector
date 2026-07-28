@@ -1,0 +1,196 @@
+@import 'tailwindcss';
+
+/* ---------------------------------------------------------------------------
+   Tema corporativo — paleta do sistema de contabilidade. Tema único, claro:
+   o visualizador acompanha o sistema principal, não a preferência do SO.
+
+   Verde #339933 é a marca. Ele carrega ação (botões, ícones, seleção) e também
+   valor de dado, conforme especificado. Por isso a semântica do diff não pode
+   depender de matiz sozinha: lá, cada linha tem barra à esquerda, fundo tingido
+   e um glifo (+ − ~), e o verde de "adicionado" é mais fechado que o da marca.
+--------------------------------------------------------------------------- */
+@theme {
+  --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', monospace;
+
+  /* Marca */
+  --color-brand-50: #ebf6eb;
+  --color-brand-100: #dceedc;
+  --color-brand-500: #339933;
+  --color-brand-600: #2a7f2a;
+  --color-brand-700: #216621;
+
+  /* Neutros do sistema */
+  --color-paper-0: #ffffff;
+  --color-paper-50: #fafafa;
+  --color-paper-100: #f5f5f5;
+  --color-paper-300: #e0e0e0;
+  --color-paper-500: #999999;
+  --color-paper-600: #666666;
+  --color-paper-700: #555555;
+  --color-paper-900: #333333;
+
+  /**
+   * Semântica de diff. `removed` é o negativo do sistema (#C8102E); o verde de
+   * `added` é mais fechado que o da marca de propósito, já que aqui os dois
+   * podem aparecer na mesma tela.
+   */
+  --color-added: #1f7a1f;
+  --color-removed: #c8102e;
+  --color-changed: #b26a00;
+
+  --radius-panel: 0.5rem;
+}
+
+@layer base {
+  /**
+   * Rampa de profundidade: viaja do verde da marca até o cinza secundário do
+   * sistema, então a régua sai inteira da paleta corporativa.
+   *
+   * Fica fora de `@theme` de propósito. O Tailwind v4 remove tokens de tema que
+   * nenhum utilitário referencia, e estes são lidos por `style` dinâmico
+   * (`var(--depth-3)`) — dentro de `@theme` eles seriam eliminados na build de
+   * produção e as guias sairiam sem cor.
+   */
+  :root {
+    --depth-0: #339933;
+    --depth-1: #3e8f4b;
+    --depth-2: #48855e;
+    --depth-3: #527b70;
+    --depth-4: #5c7182;
+    --depth-5: #666666;
+  }
+
+  :root {
+    color-scheme: light;
+    /* Área de conteúdo e barra superior. */
+    --surface: var(--color-paper-0);
+    /* Painéis laterais retráteis. */
+    --surface-rail: var(--color-paper-100);
+    /* Poços dentro do branco: blocos de código, trilhos de abas. */
+    --surface-sunken: var(--color-paper-50);
+    /* Elevado sobre o trilho cinza: campos e cartões precisam ser brancos
+       para não sumirem dentro do #F5F5F5 do painel lateral. */
+    --surface-raised: var(--color-paper-0);
+    --hairline: var(--color-paper-300);
+
+    --fg: var(--color-paper-900);
+    --fg-muted: var(--color-paper-600);
+    --fg-subtle: var(--color-paper-500);
+    /* Nome de atributo — hierarquia entre o título e o valor. */
+    --fg-key: var(--color-paper-700);
+    /* Valor de dado. */
+    --fg-value: var(--color-brand-500);
+
+    --hover: var(--color-brand-50);
+    --selected: var(--color-brand-100);
+  }
+
+  * {
+    border-color: var(--hairline);
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--surface);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: color-mix(in oklab, var(--fg-muted) 32%, transparent);
+    border: 3px solid transparent;
+    background-clip: content-box;
+    border-radius: 99px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in oklab, var(--fg-muted) 55%, transparent);
+    background-clip: content-box;
+  }
+}
+
+@layer components {
+  /* A régua de profundidade: uma guia hairline por nível de aninhamento. */
+  .depth-guide {
+    width: 14px;
+    flex: none;
+    position: relative;
+  }
+  .depth-guide::before {
+    content: '';
+    position: absolute;
+    inset-block: -1px;
+    left: 6px;
+    width: 1px;
+    background: currentColor;
+    opacity: 0.3;
+  }
+
+  /**
+   * Marca-texto da busca. Amarelo por convenção — é o que todo navegador usa
+   * em Ctrl+F, e é a única família que não disputa com o verde de valor nem
+   * com o vermelho de alerta.
+   */
+  .hl {
+    background: #ffe9a8;
+    color: var(--color-paper-900);
+    border-radius: 2px;
+    padding-inline: 1px;
+  }
+  .hl[data-active='true'] {
+    background: var(--color-brand-500);
+    color: #fff;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-panel);
+  }
+
+  .num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .eyebrow {
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
