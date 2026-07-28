@@ -19,6 +19,7 @@ import {
   type ViewMode,
 } from './store/useWorkspace'
 import { useSearchAndFilters } from './hooks/useXmlAnalysis'
+import { useSaveDocument } from './hooks/useSaveDocument'
 import { expandAll, expandToDepth } from './lib/xml/flatten'
 import { countEdits } from './lib/xml/edits'
 import { downloadXml } from './lib/download'
@@ -33,6 +34,7 @@ import { NodeTable } from './components/table/NodeTable'
 import { DiffView } from './components/diff/DiffView'
 import { MetricsPanel } from './components/metrics/MetricsPanel'
 import { Button, IconButton, Segmented } from './components/ui/controls'
+import { ToastHost } from './components/ui/Toast'
 import { cn } from './lib/cn'
 
 export default function App() {
@@ -48,6 +50,7 @@ export default function App() {
 
   const { search, visible, fields, schema, query } = useSearchAndFilters(doc)
   const [inspectorTab, setInspectorTab] = useState<'metrics' | 'node'>('metrics')
+  const { save, saving } = useSaveDocument()
 
   // A busca abre o caminho até cada ocorrência. Realçar um nó que está dentro
   // de um bloco fechado não ajuda ninguém.
@@ -92,7 +95,9 @@ export default function App() {
           <ChangesBar
             doc={doc}
             editCount={editCount}
+            saving={saving}
             onRevertAll={() => store.revertDocument(doc.id)}
+            onSave={() => void save(doc)}
           />
         )}
 
@@ -227,6 +232,8 @@ export default function App() {
             </div>
           </aside>
         </div>
+
+        <ToastHost />
       </div>
     </DropZone>
   )

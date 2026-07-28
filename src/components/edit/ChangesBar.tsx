@@ -1,22 +1,33 @@
-import { Download, FileWarning, RotateCcw } from 'lucide-react'
+import { FileWarning, RotateCcw, Save } from 'lucide-react'
 import type { XmlDocument } from '../../types/xml'
 import { countMixedContent } from '../../lib/xml/serialize'
-import { downloadXml } from '../../lib/download'
 import { formatInt } from '../../lib/xml/coerce'
 import { Button } from '../ui/controls'
 
 interface Props {
   doc: XmlDocument
   editCount: number
+  saving: boolean
   onRevertAll: () => void
+  onSave: () => void
 }
 
 /**
- * Aparece só quando há alterações pendentes. O botão de exportar vive na barra
- * superior e continua disponível sem edição nenhuma — reexportar um arquivo
- * apenas reindentado também é um uso legítimo.
+ * Aparece só quando há alterações pendentes, o que já garante o requisito de
+ * "salvar habilitado apenas com alterações": não existe barra sem edição.
+ *
+ * O download não vive mais aqui — ele está no ícone da barra superior, que
+ * continua disponível mesmo sem edição nenhuma, porque reexportar um arquivo
+ * apenas reindentado é um uso legítimo. Deixar "Baixar" e "Salvar" lado a lado
+ * só convidaria ao clique errado.
  */
-export function ChangesBar({ doc, editCount, onRevertAll }: Props) {
+export function ChangesBar({
+  doc,
+  editCount,
+  saving,
+  onRevertAll,
+  onSave,
+}: Props) {
   const mixed = countMixedContent(doc)
 
   return (
@@ -32,22 +43,27 @@ export function ChangesBar({ doc, editCount, onRevertAll }: Props) {
       {mixed > 0 && (
         <p
           className="flex items-center gap-1.5 text-[11.5px] text-[var(--fg-muted)]"
-          title="Nós com texto e filhos ao mesmo tempo: ao exportar, o texto é escrito antes dos filhos."
+          title="Nós com texto e filhos ao mesmo tempo: ao salvar, o texto é escrito antes dos filhos."
         >
           <FileWarning size={13} className="text-changed" />
           {formatInt(mixed)} nó(s) com conteúdo misto serão reordenados na
-          exportação
+          gravação
         </p>
       )}
 
       <div className="ml-auto flex items-center gap-2">
-        <Button size="sm" variant="outline" onClick={onRevertAll}>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={onRevertAll}
+          disabled={saving}
+        >
           <RotateCcw size={13} />
           Desfazer tudo
         </Button>
-        <Button size="sm" variant="solid" onClick={() => downloadXml(doc)}>
-          <Download size={13} />
-          Baixar {doc.fileName}
+        <Button size="sm" variant="solid" onClick={onSave} disabled={saving}>
+          <Save size={13} />
+          {saving ? 'Salvando…' : 'Salvar'}
         </Button>
       </div>
     </div>

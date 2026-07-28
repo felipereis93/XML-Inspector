@@ -15,6 +15,9 @@ import {
   clearNodeEdits,
   writeEdit,
 } from '../lib/xml/edits'
+import { commitEdits, remainingEdits } from '../lib/xml/commit'
+import { forgetHandle, rememberHandle } from '../lib/fs/handles'
+import type { HandleMap } from '../lib/fs/pickFiles'
 
 export type ViewMode = 'tree' | 'table' | 'diff'
 
@@ -46,7 +49,7 @@ interface WorkspaceState {
   sidebarOpen: boolean
   inspectorOpen: boolean
 
-  addFiles: (files: File[]) => Promise<void>
+  addFiles: (files: File[], handles?: HandleMap) => Promise<void>
   removeDoc: (id: string) => void
   clearFailures: () => void
 
@@ -64,6 +67,19 @@ interface WorkspaceState {
   revertField: (docId: string, target: EditTarget) => void
   revertNode: (docId: string, nodeId: number) => void
   revertDocument: (docId: string) => void
+  /**
+   * Gravação confirmada: as edições viram o novo baseline.
+   *
+   * `committed` é o overlay que foi realmente serializado — capturado antes da
+   * escrita, não relido agora. `fileName` vem do handle gravado, para o caso do
+   * "Salvar como".
+   */
+  commitDocument: (
+    docId: string,
+    bytes: number,
+    committed: DocumentEdits | undefined,
+    fileName?: string,
+  ) => void
 
   setSelected: (nodeId?: number) => void
   setExpanded: (docId: string, expanded: Set<number>) => void
@@ -90,7 +106,7 @@ export const useWorkspace = create<WorkspaceState>((set) => ({
   sidebarOpen: true,
   inspectorOpen: true,
 
-  addFiles: async (files) => {
+  addFiles: async (files, handles) => {
     const xml = files.filter((f) => /\.(xml|nfe|xsd|svg|rss|kml)$/i.test(f.name))
     const rejected = files.filter((f) => !xml.includes(f))
 
@@ -114,8 +130,11 @@ export const useWorkspace = create<WorkspaceState>((set) => ({
     const failures: ParseFailure[] = []
 
     results.forEach((result, i) => {
-      if (result.status === 'fulfilled') parsed.push(result.value)
-      else {
+      if (result.status === 'fulfilled') {
+        parsed.push(result.value)
+        const handle = handles?.get(xml[i])
+        if (handle) rememberHandle(result.value.id, handle)
+      } else {
         const reason = result.reason as ParseFailure | Error
         failures.push({
           fileName: xml[i].name,
@@ -148,6 +167,9 @@ export const useWorkspace = create<WorkspaceState>((set) => ({
 
   removeDoc: (id) =>
     set((s) => {
+      // Fechar o arquivo e reabrir depois deve pedir o handle de novo — manter
+      // o antigo apontaria para um documento que não está mais na tela.
+      forgetHandle(id)
       const docs = s.docs.filter((d) => d.id !== id)
       const expanded = { ...s.expanded }
       const edits = { ...s.edits }
@@ -216,6 +238,26 @@ export const useWorkspace = create<WorkspaceState>((set) => ({
       const edits = { ...s.edits }
       delete edits[docId]
       return { edits }
+    }),
+
+  commitDocument: (docId, bytes, committed, fileName) =>
+    set((s) => {
+      const doc = s.docs.find((d) => d.id === docId)
+      if (!doc) return s
+
+      const saved = commitEdits(doc, committed, bytes, fileName)
+
+      // Só o que foi gravado sai do overlay. Uma edição feita durante a
+      // escrita continua pendente — ela não está no arquivo.
+      const rest = remainingEdits(s.edits[docId] ?? {}, committed)
+      const edits = { ...s.edits }
+      if (Object.keys(rest).length > 0) edits[docId] = rest
+      else delete edits[docId]
+
+      return {
+        docs: s.docs.map((d) => (d.id === docId ? saved : d)),
+        edits,
+      }
     }),
 
   setSelected: (selected) => set({ selected }),
