@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { parseXml } from '../src/lib/xml/parse'
 import { buildProfiles } from '../src/lib/xml/profiles'
-import { commitEdits } from '../src/lib/xml/commit'
+import { commitEdits, remainingEdits } from '../src/lib/xml/commit'
 import { formatDecimal, formatNumber, toNumber } from '../src/lib/xml/coerce'
 import { declaredWidth, detectSchema } from '../src/lib/xml/schema'
 import { buildFieldIndex, findField, numericFields } from '../src/lib/xml/fields'
@@ -129,6 +129,83 @@ section('commitEdits consolida as edições no baseline')
     ],
     ['saída idêntica à do overlay', serializeDocument(saved) === xml],
     ['idempotente', JSON.stringify(commitEdits(saved, {}, saved.bytes)) === JSON.stringify(saved)],
+  ]
+  for (const [label, ok] of checks) {
+    console.log(`  ${ok ? 'OK    ' : 'FALHOU'} ${label}`)
+  }
+}
+
+section('remainingEdits: só sai do overlay o que foi mesmo gravado')
+{
+  const t1 = { node: findNode(a, '/nfeProc/NFe/infNFe/emit/xNome') }
+  const t2 = { node: findNode(a, '/nfeProc/NFe/infNFe/total/ICMSTot/vNF') }
+  const t3 = { node: findNode(a, '/nfeProc/NFe/infNFe/ide'), attr: 'x' }
+  const t4 = { node: findNode(a, '/nfeProc/NFe/infNFe/emit/CNPJ') }
+
+  // Duas construções independentes do MESMO overlay: o snapshot que foi para o
+  // disco e o que está na store no fim da gravação. Objetos distintos de
+  // propósito — comparar um overlay com ele mesmo passaria por identidade de
+  // referência e não exercitaria a comparação de conteúdo.
+  const build = (): DocumentEdits => {
+    let e: DocumentEdits = {}
+    e = writeEdit(e, a, t1, 'Nome Novo Ltda')
+    e = writeEdit(e, a, t2, '2000.00')
+    e = writeEdit(e, a, t3, 'marcado')
+    return e
+  }
+  const gravado = build()
+  const naStore = build()
+
+  const ids = (e: DocumentEdits) =>
+    Object.keys(e)
+      .map(Number)
+      .sort((x, y) => x - y)
+      .join(',')
+
+  // Nada mudou entre o clique e o fim da escrita.
+  const parado = remainingEdits(naStore, gravado)
+  // Um nó novo foi editado durante a gravação.
+  const novoNo = remainingEdits(writeEdit(naStore, a, t4, '00000000000191'), gravado)
+  // Um nó que ESTAVA no snapshot foi reeditado depois dele.
+  const reeditado = remainingEdits(
+    writeEdit(naStore, a, t1, 'Outro Nome Ltda'),
+    gravado,
+  )
+  // Mesma coisa, mas no atributo em vez do texto.
+  const attrReeditado = remainingEdits(
+    writeEdit(naStore, a, t3, 'outra marca'),
+    gravado,
+  )
+  // Nunca houve gravação: nada pode ser subtraído.
+  const semSnapshot = remainingEdits(naStore, undefined)
+
+  const checks: Array<[string, boolean]> = [
+    ['overlay igual ao gravado -> sobra vazio', ids(parado) === ''],
+    ['edição posterior em outro nó sobra', ids(novoNo) === String(t4.node)],
+    ['... com o valor novo intacto', novoNo[t4.node]?.value === '00000000000191'],
+    ['nó reeditado depois do snapshot não é apagado', ids(reeditado) === String(t1.node)],
+    ['... e sobra a versão NOVA, não a gravada', reeditado[t1.node]?.value === 'Outro Nome Ltda'],
+    ['atributo reeditado depois do snapshot sobra', ids(attrReeditado) === String(t3.node)],
+    ['... com o valor novo do atributo', attrReeditado[t3.node]?.attrs?.x === 'outra marca'],
+    ['snapshot indefinido -> overlay volta inteiro', ids(semSnapshot) === ids(naStore)],
+    ['... sem perder nenhuma edição', countEdits(semSnapshot) === 3],
+    ['o overlay de entrada não é mutado', countEdits(naStore) === 3],
+  ]
+  for (const [label, ok] of checks) {
+    console.log(`  ${ok ? 'OK    ' : 'FALHOU'} ${label}`)
+  }
+}
+
+section('commitEdits propaga o nome do arquivo gravado ("Salvar como")')
+{
+  const semNome = commitEdits(a, {}, a.bytes)
+  const comNome = commitEdits(a, {}, a.bytes, 'outro.xml')
+
+  const checks: Array<[string, boolean]> = [
+    ['sem o parâmetro, o nome original é preservado', semNome.fileName === 'nfe-v1.xml'],
+    ['com fileName novo, o documento passa a se chamar assim', comNome.fileName === 'outro.xml'],
+    ['renomear não mexe no conteúdo', comNome.nodes.length === a.nodes.length],
+    ['o documento de origem continua com o nome antigo', a.fileName === 'nfe-v1.xml'],
   ]
   for (const [label, ok] of checks) {
     console.log(`  ${ok ? 'OK    ' : 'FALHOU'} ${label}`)

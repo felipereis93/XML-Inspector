@@ -15,7 +15,7 @@ import {
   clearNodeEdits,
   writeEdit,
 } from '../lib/xml/edits'
-import { commitEdits } from '../lib/xml/commit'
+import { commitEdits, remainingEdits } from '../lib/xml/commit'
 import { forgetHandle, rememberHandle } from '../lib/fs/handles'
 import type { HandleMap } from '../lib/fs/pickFiles'
 
@@ -67,8 +67,19 @@ interface WorkspaceState {
   revertField: (docId: string, target: EditTarget) => void
   revertNode: (docId: string, nodeId: number) => void
   revertDocument: (docId: string) => void
-  /** Gravação confirmada: as edições viram o novo baseline. */
-  commitDocument: (docId: string, bytes: number) => void
+  /**
+   * Gravação confirmada: as edições viram o novo baseline.
+   *
+   * `committed` é o overlay que foi realmente serializado — capturado antes da
+   * escrita, não relido agora. `fileName` vem do handle gravado, para o caso do
+   * "Salvar como".
+   */
+  commitDocument: (
+    docId: string,
+    bytes: number,
+    committed: DocumentEdits | undefined,
+    fileName?: string,
+  ) => void
 
   setSelected: (nodeId?: number) => void
   setExpanded: (docId: string, expanded: Set<number>) => void
@@ -229,17 +240,22 @@ export const useWorkspace = create<WorkspaceState>((set) => ({
       return { edits }
     }),
 
-  commitDocument: (docId, bytes) =>
+  commitDocument: (docId, bytes, committed, fileName) =>
     set((s) => {
       const doc = s.docs.find((d) => d.id === docId)
       if (!doc) return s
 
-      const committed = commitEdits(doc, s.edits[docId], bytes)
+      const saved = commitEdits(doc, committed, bytes, fileName)
+
+      // Só o que foi gravado sai do overlay. Uma edição feita durante a
+      // escrita continua pendente — ela não está no arquivo.
+      const rest = remainingEdits(s.edits[docId] ?? {}, committed)
       const edits = { ...s.edits }
-      delete edits[docId]
+      if (Object.keys(rest).length > 0) edits[docId] = rest
+      else delete edits[docId]
 
       return {
-        docs: s.docs.map((d) => (d.id === docId ? committed : d)),
+        docs: s.docs.map((d) => (d.id === docId ? saved : d)),
         edits,
       }
     }),

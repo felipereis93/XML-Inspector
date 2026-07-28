@@ -11,6 +11,11 @@ import { useWorkspace } from '../store/useWorkspace'
  * arquivo de origem foi mesmo escrito. No caminho de download o original
  * continua intocado, então o banner de pendência permanece — limpá-lo ali
  * seria afirmar na tela algo que não aconteceu em disco.
+ *
+ * O overlay é fotografado antes da gravação e é essa foto que vai para a
+ * consolidação. Gravar leva tempo — diálogo do sistema, permissão, escrita — e
+ * o que for editado nesse intervalo não entra no arquivo; consolidar o overlay
+ * ao vivo apagaria o aviso dessas edições sem que elas existissem em disco.
  */
 export function useSaveDocument() {
   const [saving, setSaving] = useState(false)
@@ -19,11 +24,19 @@ export function useSaveDocument() {
   const save = useCallback(
     async (doc: XmlDocument) => {
       setSaving(true)
+      // `getState()` e não o hook reativo: o que importa é o overlay no
+      // instante do clique, que é o mesmo que `saveDocument` vai serializar.
+      const pending = useWorkspace.getState().edits[doc.id]
+
       try {
         const outcome = await saveDocument(doc)
 
         if (outcome.kind === 'saved') {
-          commitDocument(doc.id, outcome.bytes)
+          // `outcome.fileName` sempre, não só quando `picked`: depois de um
+          // "Salvar como" os salvamentos seguintes têm `picked: false` mas o
+          // handle já aponta para o arquivo novo, e o nome dele é a verdade
+          // sobre onde a gravação aconteceu.
+          commitDocument(doc.id, outcome.bytes, pending, outcome.fileName)
           pushToast(
             'success',
             outcome.picked
