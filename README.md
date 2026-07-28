@@ -2,7 +2,8 @@
 
 Visualizador e analisador de XML que roda inteiramente no navegador. Abre
 vários arquivos, navega a estrutura, filtra registros, totaliza qualquer campo
-numérico e compara duas versões lado a lado. Nenhum byte sai da máquina.
+numérico e compara duas versões lado a lado. Edita valores e atributos e grava
+de volta no arquivo de origem. Nenhum byte sai da máquina.
 
 ```bash
 npm install
@@ -39,38 +40,51 @@ Comparar XML como texto reporta reindentação como mudança.
 
 ```
 src/
-  types/xml.ts              modelo de dados (nós planos, perfis, filtros, diff)
+  types/
+    xml.ts                  modelo de dados (nós planos, perfis, filtros, diff)
+    file-system-access.d.ts tipos da File System Access API
   lib/
     cn.ts                   composição de classes
+    download.ts             âncora temporária para baixar um blob
     parsePool.ts            pool de Web Workers para parsing
+    fs/
+      fileTypes.ts          extensões aceitas, compartilhadas por abrir e salvar
+      pickFiles.ts          seletor e drop, capturando o handle de escrita
+      handles.ts            registro de handles por documento + permissão
+      saveDocument.ts       grava no arquivo de origem, ou pergunta, ou baixa
     xml/
       coerce.ts             texto -> número/data + formatação pt-BR
-      parse.ts              XML -> documento plano + perfis de caminho
+      parse.ts              XML -> documento plano
+      profiles.ts           nós -> perfis de caminho (tipos, faixas, repetição)
       flatten.ts            árvore -> linhas visíveis; serialização de volta
       search.ts             busca global e fatiamento para realce
       schema.ts             detecção de esquema embutido (DATAPACKET)
       fields.ts             índice único de campos (atributos + tags)
       filters.ts            filtros por nome de campo
       edits.ts              overlay de edições e documento efetivo
+      commit.ts             overlay -> baseline depois de gravar
       serialize.ts          documento -> string XML indentada + download
       stats.ts              soma/média/mín/máx/contagem e agrupamento
       table.ts              nós repetidos -> tabela dinâmica + CSV
       diff.ts               comparação estrutural entre dois documentos
   workers/parse.worker.ts   parsing fora da thread principal
-  store/useWorkspace.ts     estado da aplicação
+  store/
+    useWorkspace.ts         estado da aplicação
+    useToasts.ts            fila de avisos efêmeros
   hooks/
     useXmlAnalysis.ts       busca+filtros, agregação, tabela e diff memoizados
+    useSaveDocument.ts      gravar -> consolidar -> avisar
     useDebounced.ts         atraso da busca
-    useTheme.ts             tema claro/escuro
   components/
     layout/                 lista de documentos, inspetor de nó
     upload/DropZone.tsx     soltar arquivo na janela inteira + seletor
+    edit/                   barra de alterações (salvar/desfazer) e campo editável
     tree/TreeView.tsx       árvore virtualizada
     table/NodeTable.tsx     tabela dinâmica virtualizada
     diff/DiffView.tsx       comparador lado a lado / em linha
     metrics/MetricsPanel.tsx  cards de totais e quebra por chave
     filters/FilterPanel.tsx   construtor de filtros
-    ui/                     controles, realce, régua de profundidade
+    ui/                     controles, realce, régua de profundidade, toast
   App.tsx                   shell de três painéis
 ```
 
@@ -81,11 +95,13 @@ referenciado por índice. Isso permite virtualizar, filtrar e agregar em O(n) se
 recursão, e transferir o documento do worker por structured clone sem custo de
 ponteiro.
 
-**Perfis de caminho.** O parser monta, na mesma passagem, um perfil por caminho:
-quantas ocorrências, quantas numéricas, quantas de data, mínimo, máximo,
-atributos vistos e se a tag se repete sob o mesmo pai. É daí que saem, sem
-nenhuma configuração, a lista de campos totalizáveis e a lista de tabelas
-candidatas.
+**Perfis de caminho.** `buildProfiles` percorre os nós uma vez e devolve um
+perfil por caminho: quantas ocorrências, quantas numéricas, quantas de data,
+mínimo, máximo, atributos vistos e se a tag se repete sob o mesmo pai. É daí que
+saem, sem nenhuma configuração, a lista de campos totalizáveis e a lista de
+tabelas candidatas. Ele mora em `lib/xml/profiles.ts`, separado do parser,
+porque não é chamado só na abertura: consolidar uma gravação também refaz os
+perfis, e depender de reparsear o arquivo para isso seria absurdo.
 
 **Conversão conservadora.** `1.234,56` e `1234.56` viram número; `R$ 1.234,56
 (à vista)` não. Um total silenciosamente errado é pior que nenhum total — o
@@ -162,6 +178,35 @@ O commit acontece no Enter ou na saída do campo, nunca por tecla digitada: cada
 gravação recria o documento efetivo e invalida todos os memos, e fazer isso por
 caractere deixaria a digitação presa atrás do recálculo.
 
+**Salvar escreve no arquivo de origem.** O botão "Salvar" da barra de alterações
+grava o documento efetivo por cima do arquivo aberto, através da File System
+Access API — hoje Chrome e Edge. O handle de escrita é capturado no próprio
+gesto de abertura, tanto no seletor quanto no arquivo solto sobre a janela,
+porque é a única oportunidade: não há como pedir depois o handle de um `File`
+que já se tem em mãos. Com o handle guardado a gravação não abre diálogo nenhum;
+o navegador pode pedir permissão de escrita na primeira vez.
+
+Sem handle — a página foi recarregada, ou o arquivo chegou por um caminho que
+não entrega handle — o navegador pergunta onde gravar, e o arquivo escolhido
+passa a ser a origem: o nome dele substitui o antigo na lista lateral e no
+rótulo de download, e os salvamentos seguintes vão para ele sem perguntar de
+novo. Onde a API não existe (Firefox, Safari) o caminho é o download de sempre,
+e aí **o aviso de alterações pendentes continua na tela** — o arquivo original
+não mudou, e apagar o aviso afirmaria o contrário.
+
+Depois de uma gravação confirmada as edições saem do overlay e viram o novo
+baseline. Banner, selo, valor riscado e destaque de célula apagam de uma vez,
+sem que nenhum componente precise saber que houve um salvamento — todos eles
+nascem da comparação entre documento e overlay. A contrapartida é que "Desfazer
+tudo" passa a valer a partir do que está em disco: não existe volta ao conteúdo
+anterior à gravação. E só o overlay fotografado no instante do clique é
+consolidado; o que for editado enquanto a escrita acontece continua pendente,
+porque não entrou no arquivo.
+
+Nós com conteúdo misto (texto e filhos juntos) são reordenados na gravação, com
+o texto antes dos filhos — o mesmo que já acontecia na exportação. A barra de
+alterações diz quantos são antes de salvar.
+
 **O diff é estrutural.** Filhos são casados por identidade — nome da tag mais o
 valor de um atributo identificador (`Id`, `nItem`, `codigo`, …) quando existir,
 senão a posição entre irmãos de mesmo nome. Chaves repetidas são desempatadas
@@ -204,13 +249,22 @@ dentro de `@theme` sumiriam na build de produção.
   a distinção entre identificador e medida não é decidível sem semântica.
 - Só o dialeto DATAPACKET é reconhecido. Outros formatos com esquema embutido
   caem no caminho genérico, que lista todo atributo encontrado.
-- O download sai com o nome exato do arquivo importado. O navegador não
-  sobrescreve o original: se já existir um arquivo com esse nome na pasta de
-  downloads, ele salva como `nome (1).xml`. Escrever por cima exigiria a File
-  System Access API, que precisa de um handle obtido na abertura.
+- O download da barra superior sai com o nome exato do arquivo importado e não
+  sobrescreve nada: se já existir um arquivo com esse nome na pasta de
+  downloads, o navegador salva como `nome (1).xml`. Escrever por cima do
+  original é o que faz o botão "Salvar", e só onde a File System Access API
+  existe.
+- O caminho de gravação em si não é coberto por nenhuma automação: ele depende
+  de handle de arquivo e de diálogo nativo do sistema, que não abrem em
+  navegador headless. O que `npm run smoke` verifica é a lógica em volta —
+  serialização, consolidação no baseline (`commitEdits`) e a subtração do
+  overlay depois de salvar (`remainingEdits`).
 - A exportação é equivalente em conteúdo, não byte a byte: o parser descarta
   comentários e normaliza espaço em branco, então o arquivo sai reindentado.
   Em nós com conteúdo misto (texto e filhos juntos) o texto é escrito antes dos
-  filhos; a interface avisa quando o documento tem algum.
-- As edições vivem em memória. Recarregar a página perde o rascunho — exporte
-  antes de fechar.
+  filhos; a interface avisa quando o documento tem algum. Vale igual para a
+  gravação — salvar reescreve o arquivo inteiro a partir da árvore em memória.
+- As edições vivem em memória, e o handle de escrita também. Recarregar a página
+  perde o rascunho e desfaz o vínculo com o arquivo: salve antes de fechar, e
+  saiba que o primeiro "Salvar" depois de recarregar volta a perguntar onde
+  gravar.
