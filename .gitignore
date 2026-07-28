@@ -31,3 +31,7 @@ $RECYCLE.BIN/
 
 # Cache incremental do TypeScript
 *.tsbuildinfo
+
+# Worktrees e área de trabalho dos agentes
+.worktrees/
+.superpowers/
