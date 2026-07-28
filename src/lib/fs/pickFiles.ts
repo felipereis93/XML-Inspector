@@ -8,17 +8,9 @@
  * `File` que já se tem em mãos.
  */
 
-export type HandleMap = Map<File, FileSystemFileHandle>
+import { XML_FILE_TYPES } from './fileTypes'
 
-const XML_TYPES: FilePickerAcceptType[] = [
-  {
-    description: 'Arquivos XML',
-    accept: {
-      'application/xml': ['.xml', '.nfe', '.xsd', '.rss', '.kml'],
-      'image/svg+xml': ['.svg'],
-    },
-  },
-]
+export type HandleMap = Map<File, FileSystemFileHandle>
 
 export function supportsOpenPicker(): boolean {
   return typeof window !== 'undefined' && 'showOpenFilePicker' in window
@@ -36,7 +28,7 @@ export async function pickXmlFiles(): Promise<
 
   let handles: FileSystemFileHandle[]
   try {
-    handles = await picker.call(window, { multiple: true, types: XML_TYPES })
+    handles = await picker.call(window, { multiple: true, types: XML_FILE_TYPES })
   } catch {
     return undefined
   }

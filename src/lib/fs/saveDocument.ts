@@ -1,6 +1,7 @@
 import type { XmlDocument } from '../../types/xml'
 import { serializeDocument } from '../xml/serialize'
 import { downloadText } from '../download'
+import { XML_FILE_TYPES } from './fileTypes'
 import {
   ensureWritable,
   forgetHandle,
@@ -53,7 +54,7 @@ export async function saveDocument(doc: XmlDocument): Promise<SaveOutcome> {
   try {
     handle = await picker.call(window, {
       suggestedName: doc.fileName,
-      types: [{ description: 'Arquivo XML', accept: { 'application/xml': ['.xml'] } }],
+      types: XML_FILE_TYPES,
     })
   } catch (error) {
     if (isAbort(error)) return { kind: 'cancelled' }
