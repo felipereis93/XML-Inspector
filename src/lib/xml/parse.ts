@@ -1,11 +1,7 @@
 import { XMLParser, XMLValidator } from 'fast-xml-parser'
-import type {
-  AttrProfile,
-  PathProfile,
-  XmlDocument,
-  XmlNode,
-} from '../../types/xml'
+import type { XmlDocument, XmlNode } from '../../types/xml'
 import { toNumber, toTime } from './coerce'
+import { buildProfiles } from './profiles'
 
 /**
  * `preserveOrder` faz o fast-xml-parser devolver arrays em vez de objetos, o
@@ -31,7 +27,6 @@ const parser = new XMLParser({
 type RawNode = Record<string, unknown> & { ':@'?: Record<string, string> }
 
 const TEXT_KEYS = new Set(['#text', '#cdata'])
-const SAMPLE_LIMIT = 5
 
 interface Frame {
   items: RawNode[]
@@ -68,7 +63,6 @@ export function parseXml(
 
   const tree = parser.parse(source) as RawNode[]
   const nodes: XmlNode[] = []
-  const profiles: Record<string, PathProfile> = {}
   let declaration: Record<string, string> | undefined
   let root = -1
 
@@ -124,8 +118,6 @@ export function parseXml(
     if (frame.parent >= 0) nodes[frame.parent].children.push(node.id)
     else if (root < 0) root = node.id
 
-    profile(profiles, node, ordinal > 0)
-
     const elementKids = kids.filter((k) => {
       const key = tagKeyOf(k)
       return key !== undefined && !TEXT_KEYS.has(key) && key !== '#comment'
@@ -142,13 +134,7 @@ export function parseXml(
     }
   }
 
-  for (const p of Object.values(profiles)) {
-    // Um caminho só conta como numérico se praticamente todo valor preenchido
-    // for lido como número. 90% tolera um registro sujo sem transformar um
-    // campo de texto em métrica por acidente.
-    p.isNumeric = p.valued > 0 && p.numericCount / p.valued >= 0.9
-    p.isDate = !p.isNumeric && p.valued > 0 && p.dateCount / p.valued >= 0.9
-  }
+  const profiles = buildProfiles(nodes)
 
   return {
     id: `${fileName}:${started.toFixed(0)}:${Math.random().toString(36).slice(2, 8)}`,
@@ -190,86 +176,6 @@ function textOf(kids: RawNode[]): string | undefined {
 function stripNs(tag: string): string {
   const i = tag.indexOf(':')
   return i > 0 ? tag.slice(i + 1) : tag
-}
-
-function profile(
-  profiles: Record<string, PathProfile>,
-  node: XmlNode,
-  repeated: boolean,
-): void {
-  let p = profiles[node.path]
-  if (!p) {
-    p = profiles[node.path] = {
-      path: node.path,
-      leaf: node.name,
-      depth: node.depth,
-      count: 0,
-      valued: 0,
-      numericCount: 0,
-      dateCount: 0,
-      isNumeric: false,
-      isDate: false,
-      attrs: {},
-      samples: [],
-      repeats: false,
-    }
-  }
-
-  p.count++
-  if (repeated) p.repeats = true
-
-  for (const key in node.attrs) {
-    let a = p.attrs[key]
-    if (!a) {
-      a = p.attrs[key] = {
-        name: key,
-        count: 0,
-        valued: 0,
-        numericCount: 0,
-        dateCount: 0,
-        samples: [],
-      }
-    }
-    a.count++
-    observe(a, node.attrs[key])
-  }
-
-  // O nó já foi coagido na criação: reaproveitamos em vez de converter de novo.
-  observe(p, node.value, node.num, node.time)
-}
-
-/**
- * Campos de estatística comuns ao perfil de caminho e ao de atributo. Ter um
- * só acumulador garante que "é numérico" signifique exatamente a mesma coisa
- * para uma tag e para um atributo.
- */
-type ValueStats = Pick<
-  AttrProfile,
-  'valued' | 'numericCount' | 'dateCount' | 'min' | 'max' | 'samples'
->
-
-function observe(
-  target: ValueStats,
-  raw: string | undefined,
-  num = raw === undefined ? undefined : toNumber(raw),
-  time = num !== undefined || raw === undefined ? undefined : toTime(raw),
-): void {
-  if (raw === undefined || raw === '') return
-
-  target.valued++
-  if (target.samples.length < SAMPLE_LIMIT && !target.samples.includes(raw)) {
-    target.samples.push(raw)
-  }
-
-  const scalar = num ?? time
-  if (scalar === undefined) return
-  if (num !== undefined) target.numericCount++
-  else target.dateCount++
-
-  target.min =
-    target.min === undefined || scalar < target.min ? scalar : target.min
-  target.max =
-    target.max === undefined || scalar > target.max ? scalar : target.max
 }
 
 /** Caminho legível com índices: `/nfeProc/NFe/infNFe/det[2]/prod/vProd`. */

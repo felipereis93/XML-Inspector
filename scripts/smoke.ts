@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { parseXml } from '../src/lib/xml/parse'
+import { buildProfiles } from '../src/lib/xml/profiles'
 import { formatDecimal, formatNumber, toNumber } from '../src/lib/xml/coerce'
 import { declaredWidth, detectSchema } from '../src/lib/xml/schema'
 import { buildFieldIndex, findField, numericFields } from '../src/lib/xml/fields'
@@ -53,6 +54,15 @@ const vProd = findField(nfeFields, 'vProd', 'element')!
 const xProd = findField(nfeFields, 'xProd', 'element')!
 
 console.log(`nós: v1=${a.nodes.length} v2=${b.nodes.length}`)
+
+section('buildProfiles reproduz os perfis do parser')
+for (const doc of [a, b]) {
+  const rebuilt = buildProfiles(doc.nodes)
+  const same = JSON.stringify(rebuilt) === JSON.stringify(doc.profiles)
+  console.log(
+    `  ${same ? 'OK    ' : 'FALHOU'} ${doc.fileName.padEnd(14)} ${Object.keys(rebuilt).length} caminhos`,
+  )
+}
 
 section('totais de vProd (esperado: 4 itens, soma 1168.90)')
 console.log(' ', computeFieldStats(a, vProd))
