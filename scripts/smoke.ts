@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { parseXml } from '../src/lib/xml/parse'
 import { buildProfiles } from '../src/lib/xml/profiles'
+import { commitEdits } from '../src/lib/xml/commit'
 import { formatDecimal, formatNumber, toNumber } from '../src/lib/xml/coerce'
 import { declaredWidth, detectSchema } from '../src/lib/xml/schema'
 import { buildFieldIndex, findField, numericFields } from '../src/lib/xml/fields'
@@ -40,6 +41,12 @@ import type {
 const samples = join(dirname(fileURLToPath(import.meta.url)), '..', 'samples')
 const read = (name: string) =>
   parseXml(name, readFileSync(join(samples, name), 'utf8'))
+
+const findNode = (doc: XmlDocument, path: string) => {
+  const id = doc.nodes.findIndex((n) => n.path === path)
+  if (id < 0) throw new Error(`caminho ausente no sample: ${path}`)
+  return id
+}
 
 const section = (title: string) => console.log(`\n— ${title} —`)
 
@@ -89,6 +96,43 @@ section('buildProfiles: valores conferidos no XML de origem (nfe-v1.xml)')
   // <xProd> é nome de produto: texto, nenhum valor lido como número.
   const xProdProfile = nfeProfiles['/nfeProc/NFe/infNFe/det/prod/xProd']
   checkProfile('det/prod/xProd.isNumeric', xProdProfile.isNumeric, false)
+}
+
+section('commitEdits consolida as edições no baseline')
+{
+  const target1 = { node: findNode(a, '/nfeProc/NFe/infNFe/emit/xNome') }
+  const target2 = { node: findNode(a, '/nfeProc/NFe/infNFe/total/ICMSTot/vNF') }
+  const target3 = { node: findNode(a, '/nfeProc/NFe/infNFe/ide'), attr: 'x' }
+
+  let pending: DocumentEdits = {}
+  pending = writeEdit(pending, a, target1, 'Nome Novo Ltda')
+  pending = writeEdit(pending, a, target2, '2000.00')
+  pending = writeEdit(pending, a, target3, 'marcado')
+
+  const xml = serializeDocument(applyEdits(a, pending)!)
+  const bytes = Buffer.byteLength(xml, 'utf8')
+  const saved = commitEdits(a, pending, bytes)
+
+  const checks: Array<[string, boolean]> = [
+    ['valor de texto consolidado', saved.nodes[target1.node].value === 'Nome Novo Ltda'],
+    ['num recalculado', saved.nodes[target2.node].num === 2000],
+    ['atributo consolidado', saved.nodes[target3.node].attrs.x === 'marcado'],
+    ['bytes atualizados', saved.bytes === bytes],
+    ['original intocado', a.nodes[target1.node].value !== 'Nome Novo Ltda'],
+    [
+      'perfil reflete o valor novo',
+      saved.profiles['/nfeProc/NFe/infNFe/total/ICMSTot/vNF']?.max === 2000,
+    ],
+    [
+      'reeditar com o mesmo valor não marca alterado',
+      countEdits(writeEdit({}, saved, target1, 'Nome Novo Ltda')) === 0,
+    ],
+    ['saída idêntica à do overlay', serializeDocument(saved) === xml],
+    ['idempotente', JSON.stringify(commitEdits(saved, {}, saved.bytes)) === JSON.stringify(saved)],
+  ]
+  for (const [label, ok] of checks) {
+    console.log(`  ${ok ? 'OK    ' : 'FALHOU'} ${label}`)
+  }
 }
 
 section('totais de vProd (esperado: 4 itens, soma 1168.90)')

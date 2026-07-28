@@ -15,6 +15,7 @@ import {
   clearNodeEdits,
   writeEdit,
 } from '../lib/xml/edits'
+import { commitEdits } from '../lib/xml/commit'
 
 export type ViewMode = 'tree' | 'table' | 'diff'
 
@@ -64,6 +65,8 @@ interface WorkspaceState {
   revertField: (docId: string, target: EditTarget) => void
   revertNode: (docId: string, nodeId: number) => void
   revertDocument: (docId: string) => void
+  /** Gravação confirmada: as edições viram o novo baseline. */
+  commitDocument: (docId: string, bytes: number) => void
 
   setSelected: (nodeId?: number) => void
   setExpanded: (docId: string, expanded: Set<number>) => void
@@ -216,6 +219,21 @@ export const useWorkspace = create<WorkspaceState>((set) => ({
       const edits = { ...s.edits }
       delete edits[docId]
       return { edits }
+    }),
+
+  commitDocument: (docId, bytes) =>
+    set((s) => {
+      const doc = s.docs.find((d) => d.id === docId)
+      if (!doc) return s
+
+      const committed = commitEdits(doc, s.edits[docId], bytes)
+      const edits = { ...s.edits }
+      delete edits[docId]
+
+      return {
+        docs: s.docs.map((d) => (d.id === docId ? committed : d)),
+        edits,
+      }
     }),
 
   setSelected: (selected) => set({ selected }),
