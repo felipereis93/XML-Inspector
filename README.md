@@ -9,6 +9,7 @@ de volta no arquivo de origem. Nenhum byte sai da máquina.
 npm install
 npm run dev      # http://localhost:5173
 npm run smoke    # confere parser, totais, filtros e diff nos XMLs de samples/
+npm run e2e      # confere o fluxo de salvar num navegador de verdade
 
 # Diagnóstico de um arquivo real, sem abrir o navegador:
 npx tsx scripts/diagnose.ts "D:\caminho\ARQUIVO.XML"
@@ -254,11 +255,13 @@ dentro de `@theme` sumiriam na build de produção.
   downloads, o navegador salva como `nome (1).xml`. Escrever por cima do
   original é o que faz o botão "Salvar", e só onde a File System Access API
   existe.
-- O caminho de gravação em si não é coberto por nenhuma automação: ele depende
-  de handle de arquivo e de diálogo nativo do sistema, que não abrem em
-  navegador headless. O que `npm run smoke` verifica é a lógica em volta —
-  serialização, consolidação no baseline (`commitEdits`) e a subtração do
-  overlay depois de salvar (`remainingEdits`).
+- O diálogo nativo do sistema — o seletor de arquivo e o prompt de permissão —
+  não abre em navegador headless, e nenhuma automação clica nele. `npm run e2e`
+  contorna isso injetando um `FileSystemFileHandle` falso antes do primeiro
+  script da página: o seletor, o registro do handle, a edição, a serialização,
+  a gravação e a limpeza dos indicadores rodam de verdade, e só a camada que o
+  navegador não deixa automatizar fica de fora. O que continua sem cobertura é
+  a permissão de escrita concedida pelo usuário e o `createWritable` real.
 - A exportação é equivalente em conteúdo, não byte a byte: o parser descarta
   comentários e normaliza espaço em branco, então o arquivo sai reindentado.
   Em nós com conteúdo misto (texto e filhos juntos) o texto é escrito antes dos
