@@ -55,13 +55,40 @@ const xProd = findField(nfeFields, 'xProd', 'element')!
 
 console.log(`nós: v1=${a.nodes.length} v2=${b.nodes.length}`)
 
-section('buildProfiles reproduz os perfis do parser')
-for (const doc of [a, b]) {
-  const rebuilt = buildProfiles(doc.nodes)
-  const same = JSON.stringify(rebuilt) === JSON.stringify(doc.profiles)
+// Compara `buildProfiles` a valores contados à mão em samples/*.xml — nunca ao
+// que a própria função devolveu, senão a checagem vira f(x) === f(x) e não
+// pega regressão nenhuma na ordem de iteração, no SAMPLE_LIMIT ou no corte
+// dos 90% de isNumeric/isDate.
+const checkProfile = (label: string, got: unknown, expected: unknown) => {
+  const ok = Object.is(got, expected)
   console.log(
-    `  ${same ? 'OK    ' : 'FALHOU'} ${doc.fileName.padEnd(14)} ${Object.keys(rebuilt).length} caminhos`,
+    `  ${ok ? 'OK    ' : 'FALHOU'} ${label.padEnd(34)} -> ${String(got).padEnd(10)} (esperado ${expected})`,
   )
+}
+
+section('buildProfiles: valores conferidos no XML de origem (nfe-v1.xml)')
+{
+  const nfeProfiles = buildProfiles(a.nodes)
+
+  // 4 <det nItem="1..4"> no arquivo -> count=4, e são irmãos do mesmo pai:
+  // repeats=true.
+  const det = nfeProfiles['/nfeProc/NFe/infNFe/det']
+  checkProfile('det.count', det.count, 4)
+  checkProfile('det.repeats', det.repeats, true)
+
+  // Só existe um <xNome> dentro de <emit> no arquivo -> ocorrência única.
+  const emitXNome = nfeProfiles['/nfeProc/NFe/infNFe/emit/xNome']
+  checkProfile('emit/xNome.repeats', emitXNome.repeats, false)
+
+  // <vProd> dos 4 <det>: 453.60, 212.50, 268.80, 234.00 — todos numéricos.
+  const vProdProfile = nfeProfiles['/nfeProc/NFe/infNFe/det/prod/vProd']
+  checkProfile('det/prod/vProd.isNumeric', vProdProfile.isNumeric, true)
+  checkProfile('det/prod/vProd.min', vProdProfile.min, 212.5)
+  checkProfile('det/prod/vProd.max', vProdProfile.max, 453.6)
+
+  // <xProd> é nome de produto: texto, nenhum valor lido como número.
+  const xProdProfile = nfeProfiles['/nfeProc/NFe/infNFe/det/prod/xProd']
+  checkProfile('det/prod/xProd.isNumeric', xProdProfile.isNumeric, false)
 }
 
 section('totais de vProd (esperado: 4 itens, soma 1168.90)')
@@ -121,6 +148,20 @@ console.log('  ', diff.summary)
 const dp = read('datapacket.xml')
 const schema = detectSchema(dp)
 const fields = buildFieldIndex(dp, schema)
+
+section('buildProfiles: SAMPLE_LIMIT corta em 5 (datapacket.xml, valor em atributo)')
+{
+  const dpProfiles = buildProfiles(dp.nodes)
+  const row = dpProfiles['/DATAPACKET/ROWDATA/ROW']
+  // 8 <ROW> no arquivo -> count=8, todos filhos do mesmo pai: repeats=true.
+  checkProfile('ROW.count', row.count, 8)
+  checkProfile('ROW.repeats', row.repeats, true)
+
+  // LCDTCE_NumLancamento vai de 1001 a 1008 no arquivo: 8 valores distintos,
+  // mas samples não pode passar de SAMPLE_LIMIT.
+  const numLanc = row.attrs.LCDTCE_NumLancamento
+  checkProfile('ROW.attrs.LCDTCE_NumLancamento.samples.length', numLanc.samples.length, 5)
+}
 
 section('esquema detectado')
 console.log(`  dialeto: ${schema.dialect}`)
