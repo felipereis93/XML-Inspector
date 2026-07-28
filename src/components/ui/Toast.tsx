@@ -1,56 +1,37 @@
 import { useEffect } from 'react'
-import { create } from 'zustand'
 import { CheckCircle2, TriangleAlert, X } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { IconButton } from './controls'
+import { useToasts, type Toast } from '../../store/useToasts'
 
 /**
- * Avisos efêmeros de ação concluída.
+ * Avisos efêmeros de ação concluída — só os componentes aqui. A store e
+ * `pushToast` moraram para `src/store/useToasts.ts` (ver lá o porquê da
+ * separação: é convenção do projeto para store zustand, e evita misturar
+ * export de função com export de componente no mesmo arquivo).
  *
  * Separado da `FailureBar`, que é persistente e fica no fluxo da página: um
  * arquivo que não abriu precisa continuar visível até ser lido, um "salvo com
- * sucesso" não. Store própria e não estado do `App` para que qualquer camada
- * possa avisar sem receber prop nenhuma.
+ * sucesso" não.
  */
-
-export type ToastTone = 'success' | 'error'
-
-interface Toast {
-  id: string
-  tone: ToastTone
-  message: string
-}
-
-interface ToastState {
-  toasts: Toast[]
-  push: (tone: ToastTone, message: string) => void
-  dismiss: (id: string) => void
-}
-
-const DURATION = 4000
-
-const useToasts = create<ToastState>((set) => ({
-  toasts: [],
-  push: (tone, message) => {
-    const id = crypto.randomUUID()
-    set((s) => ({ toasts: [...s.toasts, { id, tone, message }] }))
-    setTimeout(
-      () => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
-      DURATION,
-    )
-  },
-  dismiss: (id) =>
-    set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
-}))
-
-/** Fora de componente: quem avisa costuma ser um handler, não um render. */
-export function pushToast(tone: ToastTone, message: string): void {
-  useToasts.getState().push(tone, message)
-}
 
 export function ToastHost() {
   const toasts = useToasts((s) => s.toasts)
   const dismiss = useToasts((s) => s.dismiss)
+
+  // Um único listener para todos os toasts, não um por card: um por card
+  // faria N handlers dispararem na mesma tecla, fechando os N de uma vez.
+  // Esc fecha só o mais recente — lê o estado corrente na hora do evento,
+  // não o `toasts` capturado no fechamento do efeito.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      const last = useToasts.getState().toasts.at(-1)
+      if (last) dismiss(last.id)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [dismiss])
 
   return (
     <div
@@ -72,15 +53,6 @@ function ToastCard({
   toast: Toast
   onDismiss: (id: string) => void
 }) {
-  // Fecha com Esc: o toast cobre o rodapé da tabela enquanto está visível.
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onDismiss(toast.id)
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [toast.id, onDismiss])
-
   const error = toast.tone === 'error'
 
   return (

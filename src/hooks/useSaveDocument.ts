@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import type { XmlDocument } from '../types/xml'
 import { saveDocument } from '../lib/fs/saveDocument'
-import { pushToast } from '../components/ui/Toast'
+import { pushToast } from '../store/useToasts'
 import { useWorkspace } from '../store/useWorkspace'
 
 /**
