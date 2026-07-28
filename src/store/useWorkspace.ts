@@ -16,6 +16,8 @@ import {
   writeEdit,
 } from '../lib/xml/edits'
 import { commitEdits } from '../lib/xml/commit'
+import { forgetHandle, rememberHandle } from '../lib/fs/handles'
+import type { HandleMap } from '../lib/fs/pickFiles'
 
 export type ViewMode = 'tree' | 'table' | 'diff'
 
@@ -47,7 +49,7 @@ interface WorkspaceState {
   sidebarOpen: boolean
   inspectorOpen: boolean
 
-  addFiles: (files: File[]) => Promise<void>
+  addFiles: (files: File[], handles?: HandleMap) => Promise<void>
   removeDoc: (id: string) => void
   clearFailures: () => void
 
@@ -93,7 +95,7 @@ export const useWorkspace = create<WorkspaceState>((set) => ({
   sidebarOpen: true,
   inspectorOpen: true,
 
-  addFiles: async (files) => {
+  addFiles: async (files, handles) => {
     const xml = files.filter((f) => /\.(xml|nfe|xsd|svg|rss|kml)$/i.test(f.name))
     const rejected = files.filter((f) => !xml.includes(f))
 
@@ -117,8 +119,11 @@ export const useWorkspace = create<WorkspaceState>((set) => ({
     const failures: ParseFailure[] = []
 
     results.forEach((result, i) => {
-      if (result.status === 'fulfilled') parsed.push(result.value)
-      else {
+      if (result.status === 'fulfilled') {
+        parsed.push(result.value)
+        const handle = handles?.get(xml[i])
+        if (handle) rememberHandle(result.value.id, handle)
+      } else {
         const reason = result.reason as ParseFailure | Error
         failures.push({
           fileName: xml[i].name,
@@ -151,6 +156,9 @@ export const useWorkspace = create<WorkspaceState>((set) => ({
 
   removeDoc: (id) =>
     set((s) => {
+      // Fechar o arquivo e reabrir depois deve pedir o handle de novo — manter
+      // o antigo apontaria para um documento que não está mais na tela.
+      forgetHandle(id)
       const docs = s.docs.filter((d) => d.id !== id)
       const expanded = { ...s.expanded }
       const edits = { ...s.edits }

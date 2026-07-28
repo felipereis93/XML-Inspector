@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { UploadCloud } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import {
+  dropHandlePromises,
+  pairDropHandles,
+  pickXmlFiles,
+  supportsOpenPicker,
+  type HandleMap,
+} from '../../lib/fs/pickFiles'
 
 interface Props {
-  onFiles: (files: File[]) => void
+  onFiles: (files: File[], handles?: HandleMap) => void
   children: ReactNode
   className?: string
 }
@@ -25,8 +32,19 @@ export function DropZone({ onFiles, children, className }: Props) {
       event.preventDefault()
       depth.current = 0
       setOver(false)
+
       const files = Array.from(event.dataTransfer?.files ?? [])
-      if (files.length) onFiles(files)
+      if (!files.length) return
+
+      // `getAsFileSystemHandle` precisa ser chamado enquanto o evento ainda
+      // está vivo; as promessas sobrevivem, os itens não.
+      const promises = event.dataTransfer
+        ? dropHandlePromises(event.dataTransfer)
+        : []
+
+      void pairDropHandles(files, promises).then((handles) =>
+        onFiles(files, handles.size ? handles : undefined),
+      )
     },
     [onFiles],
   )
@@ -81,17 +99,28 @@ export function FilePicker({
   children,
   className,
 }: {
-  onFiles: (files: File[]) => void
+  onFiles: (files: File[], handles?: HandleMap) => void
   children: ReactNode
   className?: string
 }) {
   const input = useRef<HTMLInputElement>(null)
 
+  // Usa o seletor com handle de escrita quando o navegador suporta; cai no
+  // `<input>` (sem handle) quando não.
+  const openPicker = async () => {
+    if (!supportsOpenPicker()) {
+      input.current?.click()
+      return
+    }
+    const picked = await pickXmlFiles()
+    if (picked?.files.length) onFiles(picked.files, picked.handles)
+  }
+
   return (
     <>
       <button
         type="button"
-        onClick={() => input.current?.click()}
+        onClick={() => void openPicker()}
         className={className}
       >
         {children}
