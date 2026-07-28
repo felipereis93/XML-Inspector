@@ -191,11 +191,16 @@ Sem handle — a página foi recarregada, ou o arquivo chegou por um caminho que
 não entrega handle — o navegador pergunta onde gravar, e o arquivo escolhido
 passa a ser a origem: o nome dele substitui o antigo na lista lateral e no
 rótulo de download, e os salvamentos seguintes vão para ele sem perguntar de
-novo. Onde a API não existe (Firefox, Safari) o caminho é o download de sempre,
-e aí **o aviso de alterações pendentes continua na tela** — o arquivo original
-não mudou, e apagar o aviso afirmaria o contrário.
+novo. Onde a API não existe (Firefox, Safari) o caminho é o download.
 
-Depois de uma gravação confirmada as edições saem do overlay e viram o novo
+O download **também limpa os indicadores**, e vale explicar por quê: nesses
+navegadores ele é o único caminho possível, então um aviso de pendência que
+nunca apaga deixaria de sinalizar qualquer coisa. Quem carrega a ressalva é o
+toast — `arquivo.xml baixado — substitua o original manualmente.` —, porque o
+arquivo de origem de fato não mudou. É uma troca deliberada de precisão por
+utilidade, e a alternativa foi testada em uso real antes da escolha.
+
+Depois de uma saída confirmada as edições saem do overlay e viram o novo
 baseline. Banner, selo, valor riscado e destaque de célula apagam de uma vez,
 sem que nenhum componente precise saber que houve um salvamento — todos eles
 nascem da comparação entre documento e overlay. A contrapartida é que "Desfazer

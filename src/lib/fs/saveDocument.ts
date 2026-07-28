@@ -24,7 +24,7 @@ import {
 
 export type SaveOutcome =
   | { kind: 'saved'; fileName: string; bytes: number; picked: boolean }
-  | { kind: 'downloaded'; fileName: string }
+  | { kind: 'downloaded'; fileName: string; bytes: number }
   | { kind: 'cancelled' }
 
 export class SaveError extends Error {}
@@ -47,7 +47,7 @@ export async function saveDocument(doc: XmlDocument): Promise<SaveOutcome> {
   const picker = supportsFileSystemAccess() ? window.showSaveFilePicker : undefined
   if (!picker) {
     downloadText(xml, doc.fileName, XML_TYPE)
-    return { kind: 'downloaded', fileName: doc.fileName }
+    return { kind: 'downloaded', fileName: doc.fileName, bytes }
   }
 
   let handle: FileSystemFileHandle

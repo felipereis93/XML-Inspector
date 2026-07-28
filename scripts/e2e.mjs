@@ -291,15 +291,20 @@ try {
     },
   })
 
-  // Sem a API, "Salvar" baixa uma cópia e o arquivo de origem não muda — por
-  // isso o aviso de pendência CONTINUA aceso. Limpá-lo aqui seria afirmar na
-  // tela algo que não aconteceu em disco.
+  // Sem a API — Firefox e Safari — "Salvar" baixa uma cópia. O arquivo de
+  // origem não muda, mas os indicadores limpam do mesmo jeito: ali o download
+  // é o único caminho possível, e um aviso que nunca apaga vira ruído. Quem
+  // carrega a ressalva é o toast, e por isso o texto dele faz parte do teste.
   await cenario(browser, {
-    titulo: 'sem File System Access: baixa e mantém o aviso aceso',
+    titulo: 'sem File System Access: baixa, limpa os indicadores e avisa',
     modo: 'semApi',
     abrir: abrirPeloInput,
     editar: editarNoInspetor,
-    esperado: { gravou: false, limpa: false, toast: 'baixado' },
+    esperado: {
+      gravou: false,
+      limpa: true,
+      toast: 'baixado — substitua o original manualmente.',
+    },
   })
 } finally {
   await browser.close()

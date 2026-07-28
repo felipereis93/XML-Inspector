@@ -7,10 +7,11 @@ import { useWorkspace } from '../store/useWorkspace'
 /**
  * Salvar: gravar, consolidar, avisar.
  *
- * A consolidação acontece só depois da gravação confirmada, e só quando o
- * arquivo de origem foi mesmo escrito. No caminho de download o original
- * continua intocado, então o banner de pendência permanece — limpá-lo ali
- * seria afirmar na tela algo que não aconteceu em disco.
+ * A consolidação acontece depois da saída confirmada — gravação no arquivo de
+ * origem ou download. Onde a File System Access API não existe (Firefox,
+ * Safari) o download é o único caminho possível, e manter o aviso de pendência
+ * aceso ali o tornaria permanente: ele deixaria de sinalizar qualquer coisa.
+ * Quem carrega a ressalva de que o arquivo de origem não mudou é o toast.
  *
  * O overlay é fotografado antes da gravação e é essa foto que vai para a
  * consolidação. Gravar leva tempo — diálogo do sistema, permissão, escrita — e
@@ -31,12 +32,25 @@ export function useSaveDocument() {
       try {
         const outcome = await saveDocument(doc)
 
+        // Baixar também consolida. Em Firefox e Safari não existe outro
+        // caminho: a File System Access API não é implementada, e manter o
+        // aviso aceso para sempre transformaria o estado "pendente" em ruído
+        // permanente. O toast é quem carrega o alerta de que o arquivo de
+        // origem continua com o conteúdo antigo.
+        if (outcome.kind === 'saved' || outcome.kind === 'downloaded') {
+          commitDocument(
+            doc.id,
+            outcome.bytes,
+            pending,
+            outcome.kind === 'saved' ? outcome.fileName : undefined,
+          )
+        }
+
         if (outcome.kind === 'saved') {
           // `outcome.fileName` sempre, não só quando `picked`: depois de um
           // "Salvar como" os salvamentos seguintes têm `picked: false` mas o
           // handle já aponta para o arquivo novo, e o nome dele é a verdade
           // sobre onde a gravação aconteceu.
-          commitDocument(doc.id, outcome.bytes, pending, outcome.fileName)
           pushToast(
             'success',
             outcome.picked
