@@ -1,0 +1,35 @@
+# Stack de produção para uma VPS: a API atrás do Caddy, que cuida do TLS
+# automático (Let's Encrypt) e é a única coisa exposta na porta 443/80 — a
+# API não publica porta nenhuma pro host, só "expose" pra rede interna do
+# compose. Ver README.md > "Publicar em produção" para o passo a passo.
+services:
+  api:
+    build: .
+    restart: unless-stopped
+    environment:
+      ALLOWED_ORIGIN: ${ALLOWED_ORIGIN}
+      DB_PATH: /data/app.db
+    volumes:
+      - api-data:/data
+    expose:
+      - '5174'
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - api
+
+volumes:
+  api-data:
+  caddy-data:
+  caddy-config:

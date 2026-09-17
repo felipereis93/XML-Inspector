@@ -38,3 +38,7 @@ $RECYCLE.BIN/
 
 # Banco de usuários/sessões — contém hash de senha, não é dado de exemplo
 server/data/
+
+# Variáveis da stack de produção (docker-compose.yml) — domínio e origens,
+# nada secreto aqui hoje, mas .env não é pra ser versionado por convenção
+.env

@@ -87,6 +87,26 @@ docker run -p 5174:5174 \
   xml-inspector-api
 ```
 
+**Numa VPS crua**, esse `docker run` sozinho não basta: falta HTTPS, e o
+cookie de sessão cross-site exige `Secure` (só funciona em `https://`).
+`docker-compose.yml` + `Caddyfile` na raiz resolvem isso — Caddy na frente
+da API, emitindo e renovando certificado Let's Encrypt sozinho:
+
+```bash
+# Na VPS, com Docker já instalado:
+git clone https://github.com/felipereis93/XML-Inspector.git
+cd XML-Inspector
+cp .env.example .env
+nano .env   # DOMAIN e ALLOWED_ORIGIN — ver comentários no arquivo
+docker compose up -d --build
+```
+
+Sem domínio próprio, `.env.example` mostra como usar `sslip.io` de graça
+(resolve `<ip-com-hífen>.sslip.io` pro próprio IP da VPS — é DNS de
+verdade, então o Caddy consegue emitir certificado normalmente). Só as
+portas 80 e 443 do Caddy ficam expostas; a API não publica porta nenhuma
+pro host, só é alcançável pela rede interna do compose.
+
 `diagnose.ts` mostra o que cada camada enxerga — parser, esquema, campos,
 candidatos a tabela, perfis de caminho — e é a forma rápida de descobrir em
 qual delas um arquivo específico deixa de funcionar.
