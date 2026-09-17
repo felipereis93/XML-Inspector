@@ -28,19 +28,57 @@ declare module 'express-serve-static-core' {
   }
 }
 
-const PORT = Number(process.env.BACKEND_PORT ?? 5174)
+// `PORT` é o que Render/Fly/Railway injetam; `BACKEND_PORT` é o nome usado
+// no dev local e no scripts/e2e.mjs deste projeto. `PORT` vence quando os
+// dois existem, porque é a plataforma de hospedagem quem decide a porta ali.
+const PORT = Number(process.env.PORT ?? process.env.BACKEND_PORT ?? 5174)
 const COOKIE_NAME = 'session'
 const SESSION_MAX_AGE = 7 * 24 * 60 * 60 // segundos
+
+/**
+ * Origens autorizadas a chamar a API de outro domínio — o caso do frontend
+ * publicado no GitHub Pages falando com a API hospedada em outro lugar.
+ * Vazio (padrão local) significa mesma origem o tempo todo: Vite faz proxy
+ * em dev, e o próprio Express serve o `dist/` em produção same-host, então
+ * nenhum CORS é necessário nesses dois casos.
+ */
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGIN ?? '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean)
+
+// Cross-origin com cookie exige SameSite=None, e navegador só aceita
+// SameSite=None em HTTPS — daí o Secure andar junto. Same-origin usa Lax
+// sem Secure, porque o dev local é http.
+const CROSS_SITE = ALLOWED_ORIGINS.length > 0
+const COOKIE_ATTRS = CROSS_SITE ? 'SameSite=None; Secure' : 'SameSite=Lax'
 
 seedAdmin()
 
 const app = express()
+app.use(cors)
 app.use(express.json())
 app.use(readSession)
 
 /* ------------------------------------------------------------------ */
-/* Sessão                                                              */
+/* CORS e sessão                                                       */
 /* ------------------------------------------------------------------ */
+
+function cors(req: Request, res: Response, next: NextFunction): void {
+  const origin = req.headers.origin
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin)
+    res.setHeader('Access-Control-Allow-Credentials', 'true')
+    res.setHeader('Vary', 'Origin')
+  }
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+    res.status(204).end()
+    return
+  }
+  next()
+}
 
 function parseCookies(header: string | undefined): Record<string, string> {
   const jar: Record<string, string> = {}
@@ -62,14 +100,14 @@ function readSession(req: Request, _res: Response, next: NextFunction): void {
 function setSessionCookie(res: Response, token: string): void {
   res.setHeader(
     'Set-Cookie',
-    `${COOKIE_NAME}=${token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${SESSION_MAX_AGE}`,
+    `${COOKIE_NAME}=${token}; HttpOnly; Path=/; ${COOKIE_ATTRS}; Max-Age=${SESSION_MAX_AGE}`,
   )
 }
 
 function clearSessionCookie(res: Response): void {
   res.setHeader(
     'Set-Cookie',
-    `${COOKIE_NAME}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`,
+    `${COOKIE_NAME}=; HttpOnly; Path=/; ${COOKIE_ATTRS}; Max-Age=0`,
   )
 }
 

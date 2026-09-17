@@ -1,0 +1,12 @@
+node_modules
+dist
+dist-ssr
+server/data
+src
+public
+scripts
+samples
+docs
+.git
+.github
+*.md

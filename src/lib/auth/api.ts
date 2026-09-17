@@ -1,9 +1,17 @@
 /**
- * Cliente HTTP da API de autenticação. `fetch` puro contra `/api/*` — em dev
- * o Vite faz proxy para o processo `tsx` de `server/`; em produção o mesmo
- * processo serve API e `dist/` na mesma origem. Cookie de sessão vai junto
- * por padrão: `fetch` já envia cookies em requisições de mesma origem.
+ * Cliente HTTP da API de autenticação. `fetch` puro contra `/api/*`.
+ *
+ * Três topologias, uma só variável: em dev o Vite faz proxy para o processo
+ * `tsx` de `server/` (mesma origem); num host único em produção o próprio
+ * Express serve API e `dist/` juntos (mesma origem também); e o GitHub Pages
+ * só serve arquivos estáticos, então a API mora em outro domínio ali — é
+ * quando `VITE_API_URL` entra, definida no build (ver
+ * `.github/workflows/deploy-pages.yml`). Vazia, cai no caminho relativo de
+ * sempre. `credentials: 'include'` é o que faz o cookie de sessão atravessar
+ * essa origem cruzada; em mesma origem ele não muda nada.
  */
+
+const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ?? ''
 
 export interface AuthUser {
   id: number
@@ -17,8 +25,9 @@ export interface AdminUser extends AuthUser {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, {
+  const res = await fetch(`${API_BASE}${path}`, {
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     ...init,
   })
   const body = (await res.json().catch(() => undefined)) as

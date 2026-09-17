@@ -25,6 +25,14 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+        env:
+          # URL pública da API (Render/Fly/Railway/VPS/etc.), definida em
+          # Settings > Secrets and variables > Actions > Variables > API_URL.
+          # Sem essa variável, o build sai com caminho relativo /api, que só
+          # funciona se algo mais servir a API na mesma origem do Pages —
+          # ou seja, sem backend hospedado à parte, login fica indisponível
+          # no site publicado, mas o resto do app carrega normalmente.
+          VITE_API_URL: ${{ vars.API_URL }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

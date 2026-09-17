@@ -48,6 +48,45 @@ conta por ali, para não haver risco de autobloqueio.
 
 Sessão é um cookie httpOnly de 7 dias; sair invalida a sessão no servidor.
 
+## Publicar em produção
+
+O frontend (`dist/`) e a API (`server/`) são publicados em lugares
+diferentes — o GitHub Pages só serve arquivo estático, não roda o processo
+Node da API.
+
+**Frontend, no GitHub Pages.** `.github/workflows/deploy-pages.yml` builda e
+publica a cada push em `main` (exige, uma única vez, trocar em *Settings >
+Pages > Build and deployment > Source* para "GitHub Actions"). `vite.config.ts`
+já sai com `base: '/XML-Inspector/'` no build — sem isso os assets carregam
+relativos à raiz do domínio, não à subpasta da página de projeto, e a página
+fica em branco.
+
+**API, em qualquer host que rode um processo Node persistente com disco**
+(Render, Fly.io, Railway, uma VPS — a escolha é sua; o `Dockerfile` na raiz
+funciona em qualquer um deles). Variáveis que importam nesse ambiente:
+
+| Variável | Para quê |
+| --- | --- |
+| `PORT` | Porta que a API escuta — a maioria das plataformas injeta sozinha. |
+| `DB_PATH` | Caminho do arquivo SQLite. Aponte para um volume persistente (`/data/app.db` no `Dockerfile`), senão o banco some a cada redeploy. |
+| `ALLOWED_ORIGIN` | Origem do frontend publicado (`https://felipereis93.github.io`). Sem isso a API assume mesma origem e nenhum pedido de outro domínio consegue ler a resposta — é o que habilita CORS e troca o cookie de sessão para `SameSite=None; Secure`, necessário porque frontend e API vivem em domínios diferentes. |
+| `ADMIN_USERNAME` / `ADMIN_PASSWORD` | Opcional, fixa a conta de admin em vez de gerar senha aleatória no primeiro boot. |
+
+Com a API no ar, aponte o build do frontend para ela: crie a variável de
+repositório `API_URL` (*Settings > Secrets and variables > Actions >
+Variables*) com a URL pública da API, e rode o workflow de novo (push ou
+"Run workflow" manual). Sem essa variável o build sai apontando para `/api`
+relativo — a página carrega, mas login fica indisponível, porque não há
+nada respondendo em `/api` na origem do Pages.
+
+```bash
+docker build -t xml-inspector-api .
+docker run -p 5174:5174 \
+  -v xml-inspector-data:/data \
+  -e ALLOWED_ORIGIN=https://felipereis93.github.io \
+  xml-inspector-api
+```
+
 `diagnose.ts` mostra o que cada camada enxerga — parser, esquema, campos,
 candidatos a tabela, perfis de caminho — e é a forma rápida de descobrir em
 qual delas um arquivo específico deixa de funcionar.
