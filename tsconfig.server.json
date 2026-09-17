@@ -1,0 +1,28 @@
+{
+  // Projeto separado para `server/`, no mesmo espírito de `tsconfig.scripts.json`:
+  // roda sob `tsx`, então `moduleResolution: bundler` resolve imports sem
+  // extensão. Entra no `tsc -b` para que uma mudança de tipo apareça no build,
+  // não em runtime no meio de um login.
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.server.tsbuildinfo",
+    "target": "es2023",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "skipLibCheck": true,
+
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "esModuleInterop": true,
+
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["server/**/*.ts"]
+}

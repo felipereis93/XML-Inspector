@@ -1,19 +1,52 @@
 # Prisma XML
 
-Visualizador e analisador de XML que roda inteiramente no navegador. Abre
-vários arquivos, navega a estrutura, filtra registros, totaliza qualquer campo
-numérico e compara duas versões lado a lado. Edita valores e atributos e grava
-de volta no arquivo de origem. Nenhum byte sai da máquina.
+Visualizador e analisador de XML. Abre vários arquivos, navega a estrutura,
+filtra registros, totaliza qualquer campo numérico e compara duas versões
+lado a lado. Edita valores e atributos e grava de volta no arquivo de origem.
+O XML em si nunca sai da máquina — só passa pela API local o necessário para
+autenticação.
+
+Acesso é por login. Existe uma conta de administrador, que é quem aprova
+(ou cria diretamente) as demais contas — ver "Login e usuários" abaixo.
 
 ```bash
 npm install
-npm run dev      # http://localhost:5173
+npm run dev      # sobe API (:5174) e frontend (:5173) juntos — http://localhost:5173
 npm run smoke    # confere parser, totais, filtros e diff nos XMLs de samples/
 npm run e2e      # confere o fluxo de salvar num navegador de verdade
 
 # Diagnóstico de um arquivo real, sem abrir o navegador:
 npx tsx scripts/diagnose.ts "D:\caminho\ARQUIVO.XML"
 ```
+
+## Login e usuários
+
+Na primeira vez que a API sobe (`npm run dev` ou `npm run server`), sem
+nenhum usuário no banco, ela cria a conta de administrador e imprime a senha
+gerada **uma única vez** no terminal:
+
+```
+──────────────────────────────────────────────
+ Conta de administrador criada
+ usuário: admin
+ senha:   <gerada aleatoriamente>
+ Troque a senha assim que possível.
+──────────────────────────────────────────────
+```
+
+Para fixar usuário/senha do admin em vez de gerar (útil em CI ou para
+recriar um ambiente), defina `ADMIN_USERNAME`/`ADMIN_PASSWORD` antes de subir
+a API pela primeira vez — só tem efeito enquanto a tabela de usuários está
+vazia.
+
+Qualquer pessoa pode pedir uma conta pela tela de login ("Solicitar
+acesso"), mas ela nasce **pendente** e não consegue entrar até um admin
+aprovar. O botão "Usuários" na barra superior (só visível para admin) lista
+todas as contas e permite aprovar, bloquear, promover a admin ou excluir —
+e também criar uma conta diretamente, já ativa. Ninguém altera a própria
+conta por ali, para não haver risco de autobloqueio.
+
+Sessão é um cookie httpOnly de 7 dias; sair invalida a sessão no servidor.
 
 `diagnose.ts` mostra o que cada camada enxerga — parser, esquema, campos,
 candidatos a tabela, perfis de caminho — e é a forma rápida de descobrir em
@@ -33,6 +66,7 @@ item removido, item novo, valores e atributos alterados).
 | `tailwindcss` v4 | Estilo | Tokens em `@theme`, tema claro/escuro por variável CSS. |
 | `lucide-react` | Ícones | Traço fino, consistente no tamanho pequeno da interface. |
 | `clsx` + `tailwind-merge` | Classes | Compõe classes condicionais sem conflito de utilitários. |
+| `express` | API de autenticação | Único servidor HTTP do projeto (`server/`); login, cadastro e administração de usuários. |
 
 Não usamos `diff` nem `jsdiff`: o comparador é estrutural (ver abaixo).
 Comparar XML como texto reporta reindentação como mudança.
@@ -40,6 +74,11 @@ Comparar XML como texto reporta reindentação como mudança.
 ## Estrutura
 
 ```
+server/
+  db.ts                     abre o SQLite (node:sqlite) e cria as tabelas
+  seed.ts                   cria a conta de administrador no primeiro boot
+  auth.ts                   hash de senha (scrypt) e sessão (token + cookie)
+  index.ts                  rotas Express: /api/auth/*, /api/admin/users
 src/
   types/
     xml.ts                  modelo de dados (nós planos, perfis, filtros, diff)
@@ -48,6 +87,7 @@ src/
     cn.ts                   composição de classes
     download.ts             âncora temporária para baixar um blob
     parsePool.ts            pool de Web Workers para parsing
+    auth/api.ts             cliente fetch da API de autenticação
     fs/
       fileTypes.ts          extensões aceitas, compartilhadas por abrir e salvar
       pickFiles.ts          seletor e drop, capturando o handle de escrita
@@ -72,6 +112,7 @@ src/
   store/
     useWorkspace.ts         estado da aplicação
     useToasts.ts            fila de avisos efêmeros
+    useAuth.ts              sessão do usuário logado
   hooks/
     useXmlAnalysis.ts       busca+filtros, agregação, tabela e diff memoizados
     useSaveDocument.ts      gravar -> consolidar -> avisar
@@ -85,7 +126,9 @@ src/
     diff/DiffView.tsx       comparador lado a lado / em linha
     metrics/MetricsPanel.tsx  cards de totais e quebra por chave
     filters/FilterPanel.tsx   construtor de filtros
+    auth/                   tela de login e painel de administração de usuários
     ui/                     controles, realce, régua de profundidade, toast
+  AuthGate.tsx              login ou app, a partir da sessão
   App.tsx                   shell de três painéis
 ```
 

@@ -3,11 +3,13 @@ import {
   Columns2,
   Download,
   ListTree,
+  LogOut,
   PanelLeft,
   PanelRight,
   Search,
   Sigma,
   Table2,
+  Users,
   X,
 } from 'lucide-react'
 import {
@@ -18,6 +20,8 @@ import {
   useWorkspace,
   type ViewMode,
 } from './store/useWorkspace'
+import { useAuth } from './store/useAuth'
+import { AdminUsersPanel } from './components/auth/AdminUsersPanel'
 import { useSearchAndFilters } from './hooks/useXmlAnalysis'
 import { useSaveDocument } from './hooks/useSaveDocument'
 import { expandAll, expandToDepth } from './lib/xml/flatten'
@@ -52,6 +56,10 @@ export default function App() {
   const [inspectorTab, setInspectorTab] = useState<'metrics' | 'node'>('metrics')
   const { save, saving } = useSaveDocument()
 
+  const user = useAuth((s) => s.user)
+  const logout = useAuth((s) => s.logout)
+  const [showUsers, setShowUsers] = useState(false)
+
   // A busca abre o caminho até cada ocorrência. Realçar um nó que está dentro
   // de um bloco fechado não ajuda ninguém.
   const { revealNodes } = store
@@ -85,6 +93,9 @@ export default function App() {
           onToggleInspector={store.toggleInspector}
           onExport={doc ? () => downloadXml(doc) : undefined}
           exportLabel={doc ? `Baixar ${doc.fileName}` : undefined}
+          username={user?.username}
+          onManageUsers={user?.role === 'admin' ? () => setShowUsers(true) : undefined}
+          onLogout={() => void logout()}
         />
 
         {store.failures.length > 0 && (
@@ -233,6 +244,7 @@ export default function App() {
           </aside>
         </div>
 
+        {showUsers && <AdminUsersPanel onClose={() => setShowUsers(false)} />}
         <ToastHost />
       </div>
     </DropZone>
@@ -255,6 +267,9 @@ function TopBar({
   onToggleInspector,
   onExport,
   exportLabel,
+  username,
+  onManageUsers,
+  onLogout,
 }: {
   view: ViewMode
   onViewChange: (view: ViewMode) => void
@@ -269,6 +284,9 @@ function TopBar({
   onToggleInspector: () => void
   onExport?: () => void
   exportLabel?: string
+  username?: string
+  onManageUsers?: () => void
+  onLogout: () => void
 }) {
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-[var(--hairline)] bg-[var(--surface)] px-3">
@@ -349,6 +367,22 @@ function TopBar({
       >
         <PanelRight size={16} />
       </IconButton>
+
+      <div className="ml-1 flex items-center gap-1 border-l border-[var(--hairline)] pl-2">
+        {onManageUsers && (
+          <IconButton label="Usuários" onClick={onManageUsers}>
+            <Users size={16} />
+          </IconButton>
+        )}
+        {username && (
+          <span className="hidden max-w-24 truncate text-[12px] text-[var(--fg-muted)] sm:inline">
+            {username}
+          </span>
+        )}
+        <IconButton label="Sair" onClick={onLogout}>
+          <LogOut size={16} />
+        </IconButton>
+      </div>
     </header>
   )
 }

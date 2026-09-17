@@ -17,14 +17,21 @@
  */
 import { chromium } from 'playwright-core'
 import { spawn } from 'node:child_process'
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+import { tmpdir } from 'node:os'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const PORT = 5199
+const BACKEND_PORT = 5198
 const URL = `http://localhost:${PORT}/`
 const XML = readFileSync(join(root, 'samples', 'nfe-v1.xml'), 'utf8')
+
+// Credenciais de um admin próprio do teste, isoladas num banco temporário —
+// nunca o `server/data/app.db` real, e nunca a senha gerada no primeiro boot.
+const E2E_USER = 'e2e_admin'
+const E2E_PASS = 'e2e_password_123'
 
 /* ------------------------------------------------------------------ */
 /* Infra                                                               */
@@ -64,25 +71,77 @@ function chromiumPath() {
   )
 }
 
-async function startServer() {
-  const proc = spawn('npx', ['vite', '--port', String(PORT), '--strictPort'], {
-    cwd: root,
-    shell: true,
-    stdio: 'ignore',
-  })
-
-  const deadline = Date.now() + 60_000
+async function waitFor(url, deadlineMs) {
+  const deadline = Date.now() + deadlineMs
   while (Date.now() < deadline) {
     try {
-      const res = await fetch(URL)
-      if (res.ok) return proc
+      const res = await fetch(url)
+      if (res.ok || res.status < 500) return true
     } catch {
       /* ainda subindo */
     }
     await new Promise((r) => setTimeout(r, 300))
   }
-  proc.kill()
-  throw new Error(`O dev server não respondeu em ${URL} dentro de 60s.`)
+  return false
+}
+
+/**
+ * Sobe API e frontend juntos, como `scripts/dev.mjs` faz em desenvolvimento —
+ * cada um seu processo `tsx`/`vite`, isolados numa porta e num banco só do
+ * teste. Sem isso a tela de login barraria todo cenário antes de chegar no
+ * fluxo de salvar, que é o que este arquivo verifica.
+ */
+async function startServer() {
+  const dbDir = mkdtempSync(join(tmpdir(), 'xml-inspector-e2e-'))
+  const env = {
+    ...process.env,
+    BACKEND_PORT: String(BACKEND_PORT),
+    DB_PATH: join(dbDir, 'app.db'),
+    ADMIN_USERNAME: E2E_USER,
+    ADMIN_PASSWORD: E2E_PASS,
+  }
+
+  const api = spawn('npx', ['tsx', 'server/index.ts'], {
+    cwd: root,
+    shell: true,
+    stdio: 'ignore',
+    env,
+  })
+  const web = spawn('npx', ['vite', '--port', String(PORT), '--strictPort'], {
+    cwd: root,
+    shell: true,
+    stdio: 'ignore',
+    env,
+  })
+
+  const apiUp = await waitFor(`http://localhost:${BACKEND_PORT}/api/auth/me`, 30_000)
+  const webUp = apiUp && (await waitFor(URL, 30_000))
+
+  if (!webUp) {
+    api.kill()
+    web.kill()
+    rmSync(dbDir, { recursive: true, force: true })
+    throw new Error(`API ou dev server não responderam dentro de 30s.`)
+  }
+
+  return {
+    kill() {
+      api.kill()
+      web.kill()
+      rmSync(dbDir, { recursive: true, force: true })
+    },
+  }
+}
+
+/** Preenche o formulário de login e entra como o admin do teste. */
+async function entrar(page) {
+  // `exact` importa aqui: o botão de mostrar/ocultar senha também tem
+  // "senha" no próprio aria-label ("Mostrar senha"), e o match por
+  // substring do getByLabel pegaria os dois.
+  await page.getByLabel('Usuário', { exact: true }).fill(E2E_USER)
+  await page.getByLabel('Senha', { exact: true }).fill(E2E_PASS)
+  await page.getByRole('button', { name: /^Entrar$/ }).click()
+  await page.waitForTimeout(900)
 }
 
 /**
@@ -218,6 +277,7 @@ async function cenario(browser, { titulo, modo, abrir, editar, esperado }) {
 
   await page.addInitScript(...stub(modo))
   await page.goto(URL, { waitUntil: 'networkidle' })
+  await entrar(page)
 
   await abrir(page)
   await editar(page, 'EDITADO PELO E2E')

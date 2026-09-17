@@ -35,3 +35,6 @@ $RECYCLE.BIN/
 # Worktrees e área de trabalho dos agentes
 .worktrees/
 .superpowers/
+
+# Banco de usuários/sessões — contém hash de senha, não é dado de exemplo
+server/data/
