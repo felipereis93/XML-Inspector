@@ -113,6 +113,41 @@
     border-radius: 3px;
   }
 
+  /**
+   * O Chrome pinta autofill com amarelo/azul via UA stylesheet, e isso não se
+   * sobrescreve com `background-color` normal — o único gancho é a sombra
+   * inset por baixo do próprio autofill. `transition` do background com
+   * duração absurda é o truque conhecido para o navegador nunca chegar a
+   * pintar a cor dele antes da nossa sombra cobrir.
+   */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    box-shadow: 0 0 0 1000px var(--surface) inset;
+    -webkit-text-fill-color: var(--fg);
+    caret-color: var(--fg);
+    transition: background-color 9999s ease-in-out 0s;
+    /* Ver `onAutofillStart` abaixo: dispara `animationstart` no elemento. */
+    animation-name: onAutofillStart;
+  }
+
+  /**
+   * O Chrome preenche senha salva escrevendo direto no elemento nativo, sem
+   * disparar o evento `input` que o React escuta — o estado controlado nunca
+   * sabe que o campo ficou cheio, e o label flutuante não flutua. Como
+   * `:-webkit-autofill` é confiável (o navegador sempre marca o elemento),
+   * usamos uma animação sem efeito visual só para o elemento emitir um
+   * `animationstart` que o JS consegue ouvir. `FloatingField` liga isso em
+   * `onAnimationStart`.
+   */
+  @keyframes onAutofillStart {
+    from {
+    }
+    to {
+    }
+  }
+
   ::-webkit-scrollbar {
     width: 10px;
     height: 10px;
@@ -183,6 +218,65 @@
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--fg-muted);
+  }
+
+  /**
+   * Microinterações da tela de login. Nomeadas pelo efeito, não pelo lugar
+   * que usa — `animate-rise` também serve o banner de erro, não só o cartão.
+   * `prefers-reduced-motion` já zera duração de toda animação no bloco
+   * global no fim deste arquivo, então nenhuma delas precisa de guarda própria.
+   */
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes shake {
+    10%,
+    90% {
+      transform: translateX(-1px);
+    }
+    20%,
+    80% {
+      transform: translateX(2px);
+    }
+    30%,
+    50%,
+    70% {
+      transform: translateX(-4px);
+    }
+    40%,
+    60% {
+      transform: translateX(4px);
+    }
+  }
+  @keyframes pop {
+    0% {
+      transform: scale(0.6);
+      opacity: 0;
+    }
+    60% {
+      transform: scale(1.08);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  .animate-rise {
+    animation: rise 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .animate-shake {
+    animation: shake 0.4s ease-in-out;
+  }
+  .animate-pop {
+    animation: pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   }
 }
 
